@@ -1,6 +1,6 @@
 {
   "name": "react-toaster-message",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "A modern, premium React toast notification library, built with Framer Motion, fully accessible, SSR-safe, and tree-shakeable.",
   "type": "module",
   "main": "./dist/index.cjs",

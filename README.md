@@ -2,6 +2,8 @@
 
 A modern, premium React toast notification library — Sonner-inspired, built with Framer Motion, fully accessible, SSR-safe, and tree-shakeable.
 
+🔗 **Live demo:** [https://react-toast-message.netlify.app/](https://react-toast-message.netlify.app/)
+
 - 🎬 Smooth Framer-Motion-powered animations (slide, blur-fade, spring, scale, bounce)
 - 🧱 Stack reposition with `layout` animations
 - 👆 Swipe-to-dismiss (touch + mouse) with velocity detection
@@ -147,6 +149,46 @@ Override any CSS variable to customize globally:
   --rtoast-success: #22c55e;
 }
 ```
+
+## Gradient colors
+
+Use `theme="gradient"` to apply gradients to every toast, or `variant: "gradient"` per-toast.
+The gradient backgrounds are driven by six CSS variables — override them to pick your own palette:
+
+| Variable                  | Applied to               | Default                                         |
+| ------------------------- | ------------------------ | ----------------------------------------------- |
+| `--rtoast-grad-default`   | `default` toasts         | `linear-gradient(135deg, #6366f1, #8b5cf6)`     |
+| `--rtoast-grad-success`   | `success` toasts         | `linear-gradient(135deg, #10b981, #059669)`     |
+| `--rtoast-grad-error`     | `error` toasts           | `linear-gradient(135deg, #ef4444, #b91c1c)`     |
+| `--rtoast-grad-warning`   | `warning` toasts         | `linear-gradient(135deg, #f59e0b, #d97706)`     |
+| `--rtoast-grad-info`      | `info` toasts            | `linear-gradient(135deg, #3b82f6, #2563eb)`     |
+| `--rtoast-grad-loading`   | `loading` toasts         | inherits `--rtoast-grad-default`                |
+
+### Globally via CSS
+
+```css
+.rtoast-portal {
+  --rtoast-grad-default: linear-gradient(135deg, #ec4899, #a855f7);
+  --rtoast-grad-success: linear-gradient(135deg, #14b8a6, #0284c7);
+  --rtoast-grad-error:   linear-gradient(135deg, #f43f5e, #7c2d12);
+}
+```
+
+### Inline via the `<Toaster>` (per-instance)
+
+```tsx
+<Toaster
+  theme="gradient"
+  containerStyle={{
+    "--rtoast-grad-default": "linear-gradient(135deg, #ec4899, #a855f7)",
+    "--rtoast-grad-success": "linear-gradient(135deg, #14b8a6, #0284c7)",
+    "--rtoast-grad-error":   "linear-gradient(135deg, #f43f5e, #7c2d12)",
+  } as React.CSSProperties}
+/>
+```
+
+The CSS variables also drive the per-toast `variant: "gradient"`, so you can mix and match — keep the
+base theme `light`/`dark` and call `toast.success("…", { variant: "gradient" })` for one-off gradient toasts.
 
 ## Accessibility
 

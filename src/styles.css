@@ -32,6 +32,14 @@
   --rtoast-action-fg: #ffffff;
   --rtoast-cancel-bg: transparent;
   --rtoast-cancel-fg: #475569;
+
+  /* gradient palette — override these to customize gradient theme & variant */
+  --rtoast-grad-default:  linear-gradient(135deg, #6366f1, #8b5cf6);
+  --rtoast-grad-success:  linear-gradient(135deg, #10b981, #059669);
+  --rtoast-grad-error:    linear-gradient(135deg, #ef4444, #b91c1c);
+  --rtoast-grad-warning:  linear-gradient(135deg, #f59e0b, #d97706);
+  --rtoast-grad-info:     linear-gradient(135deg, #3b82f6, #2563eb);
+  --rtoast-grad-loading:  var(--rtoast-grad-default);
 }
 
 .rtoast-theme-dark,
@@ -333,13 +341,38 @@
   color: #ffffff;
 }
 
-.rtoast--gradient-success { background: linear-gradient(135deg, #10b981, #059669); }
-.rtoast--gradient-error { background: linear-gradient(135deg, #ef4444, #b91c1c); }
-.rtoast--gradient-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.rtoast--gradient-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.rtoast--gradient-default,
-.rtoast--gradient-loading {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+.rtoast--gradient-success { background: var(--rtoast-grad-success); }
+.rtoast--gradient-error   { background: var(--rtoast-grad-error); }
+.rtoast--gradient-warning { background: var(--rtoast-grad-warning); }
+.rtoast--gradient-info    { background: var(--rtoast-grad-info); }
+.rtoast--gradient-default { background: var(--rtoast-grad-default); }
+.rtoast--gradient-loading { background: var(--rtoast-grad-loading); }
+
+/* ----- gradient THEME (apply gradient look to every toast in the portal) ----- */
+.rtoast-portal.rtoast-theme-gradient .rtoast {
+  color: #ffffff;
+  border-color: transparent;
+}
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-description { color: rgba(255, 255, 255, 0.85); }
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-icon { color: #ffffff; }
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-close { color: rgba(255, 255, 255, 0.8); }
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+.rtoast-portal.rtoast-theme-gradient .rtoast--success { background: var(--rtoast-grad-success); }
+.rtoast-portal.rtoast-theme-gradient .rtoast--error   { background: var(--rtoast-grad-error); }
+.rtoast-portal.rtoast-theme-gradient .rtoast--warning { background: var(--rtoast-grad-warning); }
+.rtoast-portal.rtoast-theme-gradient .rtoast--info    { background: var(--rtoast-grad-info); }
+.rtoast-portal.rtoast-theme-gradient .rtoast--default { background: var(--rtoast-grad-default); }
+.rtoast-portal.rtoast-theme-gradient .rtoast--loading { background: var(--rtoast-grad-loading); }
+
+/* ----- glass THEME (apply glass look to every toast in the portal) ----- */
+.rtoast-portal.rtoast-theme-glass .rtoast {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
 /* ----- collapsed stack effect ----- */
