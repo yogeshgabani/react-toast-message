@@ -6,7 +6,10 @@
       "Bash(npm install *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
       "Bash(dir \"c:\\\\yogesh\\\\New folder \\(3\\)\\\\react-toaster\\\\dist\")",
-      "Bash(npm view *)"
+      "Bash(npm view *)",
+      "Bash(dir \"c:\\\\yogesh\\\\New folder \\(3\\)\\\\react-toaster\\\\examples\")",
+      "Bash(findstr /S \"react-toaster\" \"c:\\\\yogesh\\\\New folder \\(3\\)\\\\react-toaster\\\\examples\\\\App.tsx\" \"c:\\\\yogesh\\\\New folder \\(3\\)\\\\react-toaster\\\\examples\\\\main.tsx\")",
+      "Bash(npm pack *)"
     ]
   }
 }

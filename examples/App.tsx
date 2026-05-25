@@ -163,10 +163,22 @@ export default function App() {
   } as React.CSSProperties;
   const [pageTheme, setPageTheme] = useState<"light" | "dark">("dark");
   const [copied, setCopied] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.pageTheme = pageTheme;
   }, [pageTheme]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 120);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const snippet = `import { Toaster, toast } from "react-toaster-message";
 import "react-toaster-message/styles.css";
@@ -463,6 +475,50 @@ import "react-toaster-message/styles.css";
     <div className="page">
       <style>{styles}</style>
 
+      <nav
+        className={`sticky-nav ${scrolled ? "is-visible" : ""}`}
+        aria-hidden={!scrolled}
+      >
+        <div className="sticky-nav-inner">
+          <div className="brand">
+            <div className="brand-mark">
+              <span className="dot dot-a" />
+              <span className="dot dot-b" />
+              <span className="dot dot-c" />
+            </div>
+            <span className="brand-text">react-toaster-message</span>
+          </div>
+          <div className="hero-actions">
+            <a
+              className="ghost-btn"
+              href="https://www.npmjs.com/package/react-toaster-message"
+              target="_blank"
+              rel="noreferrer"
+            >
+              npm
+            </a>
+            <a
+              className="ghost-btn"
+              href="https://github.com/yogeshgabani/react-toast-message"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub
+            </a>
+            <button
+              className="ghost-btn icon-only"
+              onClick={() =>
+                setPageTheme(pageTheme === "dark" ? "light" : "dark")
+              }
+              aria-label="Toggle page theme"
+              title="Toggle page theme"
+            >
+              {pageTheme === "dark" ? "☀️" : "🌙"}
+            </button>
+          </div>
+        </div>
+      </nav>
+
       <header className="hero">
         <div className="hero-inner">
           <div className="hero-top">
@@ -713,35 +769,144 @@ import "react-toaster-message/styles.css";
           <pre className="snippet">{snippet}</pre>
         </section>
 
-        <footer className="footer">
-          <div>
-            Built by <strong>Yogesh Gabani</strong> · MIT License
+        <footer className="footer-card">
+          <div className="footer-glow" aria-hidden />
+          <div className="footer-row footer-row-top">
+            <div className="footer-brand">
+              <div className="brand-mark footer-mark">
+                <span className="dot dot-a" />
+                <span className="dot dot-b" />
+                <span className="dot dot-c" />
+              </div>
+              <div className="footer-brand-text">
+                <div className="footer-brand-name">react-toaster-message</div>
+                <div className="footer-brand-tag">
+                  Premium toasts for modern React apps
+                </div>
+              </div>
+            </div>
+
+            <div className="footer-actions">
+              <a
+                className="footer-btn"
+                href="https://github.com/yogeshgabani/react-toast-message"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.27-1.69-1.27-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.34.95.1-.74.4-1.24.73-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.96 10.96 0 0 1 5.74 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.58.23 2.75.12 3.04.73.81 1.18 1.84 1.18 3.1 0 4.43-2.7 5.4-5.27 5.68.41.35.78 1.04.78 2.11v3.12c0 .31.21.67.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z" />
+                </svg>
+                GitHub
+              </a>
+              <a
+                className="footer-btn"
+                href="https://www.npmjs.com/package/react-toaster-message"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <path d="M0 7.334v8h6.666v1.332H12v-1.332h12v-8H0zm6.666 6.664H5.334v-4H3.999v4H1.335V8.667h5.331v5.331zm4 0v1.336H8.001V8.667h5.334v5.332h-2.669v-.001zm12.001 0h-1.33v-4h-1.336v4h-1.335v-4h-1.33v4h-2.671V8.667h8.002v5.331zM10.665 10H12v2.667h-1.335V10z" />
+                </svg>
+                npm
+              </a>
+              <a
+                className="footer-btn"
+                href="https://react-toast-message.netlify.app/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18M9 21V9" />
+                </svg>
+                Demos
+              </a>
+            </div>
           </div>
-          <div className="footer-links">
+
+          <div className="footer-divider" />
+
+          <div className="footer-row footer-row-bottom">
+            <div className="footer-meta">
+              <div className="footer-meta-row">
+                <span className="mit-badge">MIT</span>
+                <span className="footer-dot">·</span>
+                <span>© 2026 react-toaster-message</span>
+              </div>
+              <div className="footer-meta-row footer-crafted">
+                Crafted with <span className="heart">♥</span> for the React
+                community
+              </div>
+            </div>
+
             <a
-              href="https://react-toast-message.netlify.app/"
+              className="footer-author"
+              href="https://github.com/yogeshgabani"
               target="_blank"
               rel="noreferrer"
             >
-              Live demo
-            </a>
-            <a
-              href="https://www.npmjs.com/package/react-toaster-message"
-              target="_blank"
-              rel="noreferrer"
-            >
-              npm
-            </a>
-            <a
-              href="https://github.com/yogeshgabani/react-toast-message"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Source
+              Built by <strong>Yogesh Gabani</strong>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
             </a>
           </div>
         </footer>
       </main>
+
+      <button
+        className={`scroll-top-btn ${scrolled ? "is-visible" : ""}`}
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        title="Back to top"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M12 19V5" />
+          <path d="M5 12l7-7 7 7" />
+        </svg>
+      </button>
 
       <Toaster
         position={position}
@@ -863,7 +1028,25 @@ html[data-page-theme="light"] {
 }
 
 * { box-sizing: border-box; }
-html, body, #root { min-height: 100%; margin: 0; }
+*, *::before, *::after { min-width: 0; }
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+}
+#root { width: 100%; max-width: 100%; }
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+img, svg, video, canvas, iframe { max-width: 100%; height: auto; }
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   background: var(--bg-0);
@@ -874,11 +1057,93 @@ body {
 
 .page {
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background:
     radial-gradient(1100px 600px at 80% -10%, rgba(167,139,250,0.18), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(96,165,250,0.16), transparent 60%),
     radial-gradient(700px 500px at 50% 100%, rgba(244,114,182,0.10), transparent 60%),
     var(--bg-0);
+}
+
+/* STICKY NAV */
+.sticky-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 12px 24px;
+  background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transform: translateY(-100%);
+  opacity: 0;
+  transition:
+    transform .4s cubic-bezier(.22, 1, .36, 1),
+    opacity .35s ease,
+    border-color .35s ease,
+    background .35s ease;
+  will-change: transform, opacity;
+}
+.sticky-nav.is-visible {
+  transform: translateY(0);
+  opacity: 1;
+  border-bottom-color: var(--border);
+  box-shadow: 0 8px 24px -18px rgba(0, 0, 0, 0.45);
+}
+.sticky-nav-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* SCROLL TO TOP */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 49;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-strong);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transform: translateY(16px) scale(0.85);
+  pointer-events: none;
+  transition:
+    opacity .3s ease,
+    transform .4s cubic-bezier(.22, 1, .36, 1),
+    background .2s ease,
+    color .2s ease,
+    border-color .2s ease;
+}
+.scroll-top-btn.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.scroll-top-btn:hover {
+  background: var(--primary-bg);
+  color: var(--primary-text);
+  border-color: transparent;
+  transform: translateY(-3px) scale(1.05);
+}
+.scroll-top-btn:active {
+  transform: translateY(-1px) scale(1);
 }
 
 /* HERO */
@@ -888,6 +1153,7 @@ body {
   overflow: hidden;
 }
 .hero-inner {
+  width: 100%;
   max-width: 1120px;
   margin: 0 auto;
 }
@@ -895,12 +1161,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 56px;
+  flex-wrap: nowrap;
 }
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .brand-mark {
   display: inline-flex;
@@ -919,10 +1189,18 @@ body {
 .brand-text {
   font-weight: 600;
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
+.brand-mark { flex-shrink: 0; }
 
 .hero-actions {
-  display: flex; gap: 8px;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
 }
 .ghost-btn {
   display: inline-flex;
@@ -946,7 +1224,7 @@ body {
 }
 .ghost-btn.icon-only { padding: 8px 10px; }
 
-.hero-content { max-width: 760px; }
+.hero-content { width: 100%; max-width: 760px; min-width: 0; }
 .pill {
   display: inline-block;
   padding: 6px 12px;
@@ -958,11 +1236,13 @@ body {
   margin-bottom: 22px;
 }
 .title {
-  font-size: clamp(36px, 6vw, 64px);
-  line-height: 1.05;
+  font-size: clamp(30px, 6vw, 64px);
+  line-height: 1.08;
   letter-spacing: -0.035em;
   margin: 0 0 18px;
   font-weight: 700;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .title-grad {
   background: linear-gradient(120deg, var(--accent-3), var(--accent), var(--accent-2));
@@ -986,6 +1266,7 @@ body {
 .install {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 12px 18px;
   border-radius: 12px;
@@ -994,6 +1275,9 @@ body {
   font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
   font-size: 13.5px;
   color: var(--text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .install .prompt { color: var(--text-mute); }
 .primary-btn {
@@ -1014,15 +1298,21 @@ body {
 
 /* MAIN */
 .main {
+  width: 100%;
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 24px 80px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 28px;
 }
+.main > * { min-width: 0; max-width: 100%; }
 
 /* CONTROL CARD */
 .control-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -1042,7 +1332,7 @@ body {
 }
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
   gap: 16px;
 }
 .control {
@@ -1207,6 +1497,9 @@ body {
 
 /* TABS */
 .tabs-bar {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1242,8 +1535,11 @@ body {
 
 /* DEMOS */
 .demos {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 12px;
 }
 .demo-card {
@@ -1254,6 +1550,9 @@ body {
   align-items: center;
   gap: 14px;
   padding: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1300,11 +1599,15 @@ body {
 
 /* SNIPPET */
 .snippet-card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 20px 24px 24px;
   backdrop-filter: blur(20px);
+  overflow: hidden;
 }
 .snippet-head {
   display: flex;
@@ -1354,33 +1657,350 @@ body {
   font-size: 13px;
   line-height: 1.65;
   color: var(--text);
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* FOOTER */
-.footer {
+/* FOOTER CARD */
+.footer-card {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin-top: 20px;
+  padding: 26px 28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px -28px rgba(0, 0, 0, 0.55),
+    0 6px 18px -10px rgba(124, 58, 237, 0.18);
+  overflow: hidden;
+  isolation: isolate;
+}
+.footer-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent-3) 18%,
+    var(--accent) 50%,
+    var(--accent-2) 82%,
+    transparent
+  );
+  opacity: 0.85;
+  z-index: 2;
+}
+.footer-glow {
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 240px;
+  background:
+    radial-gradient(420px 200px at 20% 0%, rgba(244,114,182,0.18), transparent 60%),
+    radial-gradient(420px 200px at 80% 0%, rgba(96,165,250,0.16), transparent 60%);
+  filter: blur(6px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.footer-row {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 12px;
-  color: var(--text-mute);
-  font-size: 13px;
+  gap: 16px;
 }
-.footer-links { display: flex; gap: 16px; }
-.footer-links a {
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.footer-mark {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+.footer-brand-text { min-width: 0; }
+.footer-brand-name {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.footer-brand-tag {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+
+.footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.4);
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease,
+    color .18s ease,
+    box-shadow .18s ease;
+}
+.footer-btn svg { opacity: 0.85; transition: opacity .18s ease; }
+.footer-btn:hover {
+  background: var(--surface-strong);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -12px rgba(124, 58, 237, 0.35);
+}
+.footer-btn:hover svg { opacity: 1; }
+
+.footer-divider {
+  position: relative;
+  z-index: 1;
+  height: 1px;
+  margin: 20px 0 18px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+.footer-row-bottom { gap: 12px 18px; }
+.footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-mute);
+}
+.footer-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.mit-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.footer-dot { opacity: 0.5; }
+.footer-sep {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-mute);
+  opacity: 0.5;
+}
+.footer-crafted .heart {
+  display: inline-block;
+  color: #f43f5e;
+  transform: translateY(1px);
+  animation: heartBeat 1.6s ease-in-out infinite;
+}
+@keyframes heartBeat {
+  0%, 100% { transform: translateY(1px) scale(1); }
+  25% { transform: translateY(1px) scale(1.18); }
+  50% { transform: translateY(1px) scale(1); }
+  75% { transform: translateY(1px) scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .footer-crafted .heart { animation: none; }
+}
+
+.footer-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text-soft);
   text-decoration: none;
-  transition: color .15s ease;
+  font-size: 13px;
+  transition:
+    background .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    transform .2s ease,
+    box-shadow .2s ease;
 }
-.footer-links a:hover { color: var(--text); }
+.footer-author strong {
+  background: linear-gradient(120deg, var(--accent-3), var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+.footer-author svg {
+  color: var(--text-mute);
+  transition: transform .2s ease, color .2s ease;
+}
+.footer-author:hover {
+  background: var(--surface-strong);
+  border-color: var(--border-strong);
+  color: var(--text);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -12px rgba(124, 58, 237, 0.4);
+}
+.footer-author:hover svg {
+  color: var(--accent);
+  transform: translate(2px, -2px);
+}
 
+/* Tablet & small laptop */
+@media (max-width: 900px) {
+  .hero { padding: 24px 20px 48px; }
+  .hero-top { margin-bottom: 44px; gap: 12px; flex-wrap: wrap; }
+  .main { padding: 0 20px 64px; gap: 24px; }
+  .control-card { padding: 20px; }
+  .control-grid { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+  .snippet-card { padding: 18px 20px 20px; }
+  .snippet { padding: 16px 18px; font-size: 12.5px; }
+  .tab { flex: 1 1 140px; padding: 9px 14px; }
+  .demos { grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); }
+  .footer-card { padding: 24px 22px; }
+  .sticky-nav { padding: 11px 20px; }
+}
+
+/* Mobile landscape & large phones */
 @media (max-width: 640px) {
-  .hero { padding: 20px 16px 36px; }
-  .hero-top { margin-bottom: 36px; }
-  .main { padding: 0 16px 56px; }
-  .hero-cta { flex-direction: column; align-items: stretch; }
+  .hero { padding: 18px 12px 32px; }
+  .hero-top {
+    margin-bottom: 32px;
+    gap: 10px;
+    flex-wrap: nowrap;
+  }
+  .hero-actions { flex-wrap: nowrap; gap: 6px; }
+  .main { padding: 0 12px 56px; gap: 22px; }
+  .pill { font-size: 11.5px; padding: 5px 10px; margin-bottom: 18px; }
+  .lede { margin-bottom: 22px; }
+  .hero-cta { flex-direction: column; align-items: stretch; gap: 10px; }
   .install, .primary-btn { width: 100%; justify-content: center; }
+  .install { padding: 11px 14px; font-size: 12.5px; }
+
+  .control-card { padding: 18px; border-radius: 16px; }
+  .control-head h2 { font-size: 16px; }
+  .control-head p { font-size: 13px; margin-bottom: 16px; }
+  .control-grid { grid-template-columns: 1fr; gap: 14px; }
+  .toggle-row { flex-direction: row; flex-wrap: wrap; gap: 12px; }
+
+  .tabs-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    scroll-snap-type: x mandatory;
+  }
+  .tabs-bar::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto;
+    min-width: 140px;
+    scroll-snap-align: start;
+  }
+
+  .demos { grid-template-columns: 1fr; gap: 10px; }
+  .demo-card { padding: 14px; gap: 12px; }
+  .demo-icon { width: 36px; height: 36px; font-size: 17px; }
+
+  .snippet-card { padding: 16px; border-radius: 16px; }
+  .snippet-head h3 { font-size: 14px; }
+  .snippet { padding: 14px 16px; font-size: 12px; line-height: 1.6; }
+  .copy-btn { padding: 6px 10px; font-size: 12px; }
+
+  .sticky-nav { padding: 10px 16px; }
+  .sticky-nav .brand-text { font-size: 13px; }
+  .scroll-top-btn { bottom: 16px; right: 16px; width: 40px; height: 40px; }
+
+  .footer-card { padding: 22px 18px; border-radius: 16px; }
+  .footer-row { gap: 14px; }
+  .footer-row-top { flex-direction: column; align-items: flex-start; }
+  .footer-actions { width: 100%; }
+  .footer-btn { flex: 1 1 auto; justify-content: center; padding: 9px 12px; }
+  .footer-divider { margin: 16px 0 14px; }
+  .footer-row-bottom { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .footer-author { width: 100%; justify-content: center; }
+}
+
+/* Small phones */
+@media (max-width: 420px) {
+  .hero { padding: 14px 10px 24px; }
+  .hero-top { margin-bottom: 24px; gap: 8px; }
+  .brand { gap: 8px; }
+  .brand-text { font-size: 12.5px; }
+  .hero-actions { gap: 4px; }
+  .ghost-btn { padding: 6px 10px; font-size: 12px; }
+  .ghost-btn.icon-only { padding: 6px 8px; }
+  .main { padding: 0 10px 44px; gap: 18px; }
+
+  .title { letter-spacing: -0.025em; }
+  .lede { font-size: 14px; line-height: 1.5; }
+  .install { font-size: 11.5px; padding: 10px 12px; }
+  .install .prompt { display: none; }
+  .primary-btn { padding: 10px 16px; font-size: 13px; }
+
+  .control-card { padding: 14px; border-radius: 14px; }
+  .position-grid { padding: 6px; gap: 4px; }
+  .palette-row { padding: 5px; gap: 4px; }
+  .palette-chip { padding: 4px 8px 4px 5px; font-size: 12px; }
+  .palette-swatch { width: 16px; height: 16px; }
+
+  .snippet-card { padding: 14px; border-radius: 14px; }
+  .snippet { padding: 12px 14px; font-size: 11.5px; }
+
+  .footer-card { padding: 20px 14px; border-radius: 14px; }
+  .footer-actions { gap: 6px; }
+  .footer-btn { font-size: 12px; padding: 8px 10px; gap: 6px; }
+  .footer-brand { gap: 12px; }
+  .footer-brand-name { font-size: 14px; }
+  .footer-brand-tag { font-size: 11.5px; }
+  .footer-meta { font-size: 11.5px; }
+  .footer-meta-row { gap: 8px; }
+  .mit-badge { font-size: 10px; padding: 2px 6px; }
+
+  .sticky-nav { padding: 9px 14px; }
+  .sticky-nav .ghost-btn { padding: 6px 8px; font-size: 11.5px; }
+  .scroll-top-btn { bottom: 14px; right: 14px; width: 38px; height: 38px; }
+}
+
+/* Very small phones — hide long brand text, keep colorful mark */
+@media (max-width: 360px) {
+  .brand-text, .sticky-nav .brand-text { display: none; }
+  .ghost-btn { padding: 5px 8px; font-size: 11px; }
+  .ghost-btn.icon-only { padding: 5px 7px; }
 }
 `;
