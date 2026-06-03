@@ -4,6 +4,7 @@
    ============================================================ */
 
 .rtoast-portal {
+  color-scheme: light;
   --rtoast-width: 360px;
   --rtoast-radius: 14px;
   --rtoast-padding: 14px 16px;
@@ -44,6 +45,7 @@
 
 .rtoast-theme-dark,
 .rtoast-portal.rtoast-theme-dark {
+  color-scheme: dark;
   --rtoast-bg: #0b1220;
   --rtoast-fg: #f8fafc;
   --rtoast-muted: #94a3b8;
@@ -55,6 +57,10 @@
   --rtoast-action-bg: #f8fafc;
   --rtoast-action-fg: #0b1220;
   --rtoast-cancel-fg: #94a3b8;
+}
+
+.rtoast-theme-system {
+  color-scheme: light dark;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -112,17 +118,57 @@
   font-family: var(--rtoast-font);
   font-size: var(--rtoast-font-size);
   line-height: var(--rtoast-line-height);
+  letter-spacing: normal;
+  text-align: start;
+  text-transform: none;
   overflow: hidden;
   will-change: transform, opacity, filter;
   touch-action: none;
   user-select: none;
   -webkit-font-smoothing: antialiased;
   cursor: default;
+  isolation: isolate;
+}
+
+/* Reset any inherited text styles from the host page so the toast always
+   renders consistently — fixes cases where the host project sets things
+   like `color: transparent` on global `div` or text-indent / visibility
+   shenanigans on parent elements. */
+.rtoast,
+.rtoast * {
+  visibility: visible;
+  text-indent: 0;
 }
 
 .rtoast:focus-visible {
   outline: 2px solid var(--rtoast-info);
   outline-offset: 2px;
+}
+
+/* Polished hover: subtle lift + shadow bloom. The translate is applied via
+   filter/scale on the inner so framer-motion's transform on the <li>
+   stays untouched. */
+.rtoast:hover {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 14px 32px rgba(15, 23, 42, 0.12),
+    0 28px 70px rgba(15, 23, 42, 0.14);
+}
+.rtoast-theme-dark .rtoast:hover,
+.rtoast-theme-glass .rtoast:hover,
+.rtoast-theme-gradient .rtoast:hover {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 14px 32px rgba(0, 0, 0, 0.5),
+    0 28px 70px rgba(0, 0, 0, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  .rtoast-theme-system .rtoast:hover {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 14px 32px rgba(0, 0, 0, 0.5),
+      0 28px 70px rgba(0, 0, 0, 0.55);
+  }
 }
 
 .rtoast-inner {
@@ -142,6 +188,19 @@
   width: 20px;
   height: 20px;
   margin-top: 1px;
+  position: relative;
+}
+
+/* Soft halo behind the icon on rich variants — gives a more premium feel
+   without changing layout. */
+.rtoast--rich .rtoast-icon::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.12;
+  z-index: -1;
 }
 
 .rtoast--success .rtoast-icon { color: var(--rtoast-success); }
@@ -161,12 +220,14 @@
 .rtoast-body {
   flex: 1;
   min-width: 0;
+  color: inherit;
 }
 
 .rtoast-title {
   font-weight: 600;
-  color: var(--rtoast-fg);
+  color: inherit;
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .rtoast-description {
@@ -174,6 +235,15 @@
   color: var(--rtoast-muted);
   font-size: 13px;
   word-wrap: break-word;
+  overflow-wrap: anywhere;
+  opacity: 0.95;
+}
+
+/* When rich colors are active, description inherits the rich text color
+   at a softened opacity so it stays readable on any background. */
+.rtoast--rich .rtoast-description {
+  color: inherit;
+  opacity: 0.78;
 }
 
 .rtoast-actions {
@@ -194,17 +264,47 @@
   font-size: 13px;
   padding: 6px 12px;
   border-radius: 8px;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease,
+    box-shadow 0.15s ease;
   font-family: inherit;
 }
 
-.rtoast-action:hover { opacity: 0.9; }
+.rtoast-action:hover {
+  opacity: 0.92;
+  box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.3);
+}
 .rtoast-action:active { transform: scale(0.97); }
+.rtoast-action:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
 
 .rtoast-action--cancel {
   background: transparent;
   color: var(--rtoast-cancel-fg);
   border: 1px solid var(--rtoast-border);
+  box-shadow: none;
+}
+.rtoast-action--cancel:hover {
+  background: var(--rtoast-border);
+  box-shadow: none;
+}
+
+/* Action buttons on rich/gradient surfaces inherit the surface tint so they
+   feel native to the toast rather than reverting to the neutral palette. */
+.rtoast--rich .rtoast-action,
+.rtoast--gradient .rtoast-action,
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-action {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+.rtoast--rich .rtoast-action--cancel,
+.rtoast--gradient .rtoast-action--cancel,
+.rtoast-portal.rtoast-theme-gradient .rtoast .rtoast-action--cancel {
+  background: transparent;
+  color: currentColor;
+  border-color: currentColor;
+  opacity: 0.85;
 }
 
 /* close button */
@@ -213,7 +313,8 @@
   cursor: pointer;
   background: transparent;
   border: 0;
-  color: var(--rtoast-muted);
+  color: currentColor;
+  opacity: 0.55;
   width: 24px;
   height: 24px;
   display: inline-flex;
@@ -221,13 +322,21 @@
   justify-content: center;
   border-radius: 6px;
   flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   margin: -4px -4px -4px 0;
+  font-family: inherit;
 }
 
 .rtoast-close:hover {
-  background: var(--rtoast-border);
-  color: var(--rtoast-fg);
+  background: rgba(127, 127, 127, 0.15);
+  opacity: 1;
+  transform: scale(1.05);
+}
+.rtoast-close:active { transform: scale(0.95); }
+.rtoast-close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  opacity: 1;
 }
 
 /* progress bar */
@@ -294,25 +403,87 @@
 .rtoast--rich.rtoast--rich-info .rtoast-description { color: #1d4ed8; }
 .rtoast--rich.rtoast--rich-info .rtoast-icon { color: #1d4ed8; }
 
-.rtoast-theme-dark .rtoast--rich.rtoast--rich-success {
-  background: rgba(16, 185, 129, 0.12);
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-success,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-success .rtoast-description,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-success .rtoast-icon {
   color: #d1fae5;
+}
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-success {
+  background: rgba(16, 185, 129, 0.14);
   border-color: rgba(16, 185, 129, 0.4);
 }
-.rtoast-theme-dark .rtoast--rich.rtoast--rich-error {
-  background: rgba(239, 68, 68, 0.12);
+
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-error,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-error .rtoast-description,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-error .rtoast-icon {
   color: #fecaca;
+}
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-error {
+  background: rgba(239, 68, 68, 0.14);
   border-color: rgba(239, 68, 68, 0.4);
 }
-.rtoast-theme-dark .rtoast--rich.rtoast--rich-warning {
-  background: rgba(245, 158, 11, 0.12);
+
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-warning,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-warning .rtoast-description,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-warning .rtoast-icon {
   color: #fde68a;
+}
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-warning {
+  background: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.4);
 }
-.rtoast-theme-dark .rtoast--rich.rtoast--rich-info {
-  background: rgba(59, 130, 246, 0.12);
+
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-info,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-info .rtoast-description,
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-info .rtoast-icon {
   color: #bfdbfe;
+}
+.rtoast-theme-dark .rtoast--rich.rtoast--rich-info {
+  background: rgba(59, 130, 246, 0.14);
   border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Same dark overrides for theme="system" when the user's OS is in dark mode */
+@media (prefers-color-scheme: dark) {
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-success,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-success .rtoast-description,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-success .rtoast-icon {
+    color: #d1fae5;
+  }
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-success {
+    background: rgba(16, 185, 129, 0.14);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-error,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-error .rtoast-description,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-error .rtoast-icon {
+    color: #fecaca;
+  }
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-error {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-warning,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-warning .rtoast-description,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-warning .rtoast-icon {
+    color: #fde68a;
+  }
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-warning {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-info,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-info .rtoast-description,
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-info .rtoast-icon {
+    color: #bfdbfe;
+  }
+  .rtoast-theme-system .rtoast--rich.rtoast--rich-info {
+    background: rgba(59, 130, 246, 0.14);
+    border-color: rgba(59, 130, 246, 0.4);
+  }
 }
 
 /* ----- glass variant ----- */
@@ -375,12 +546,67 @@
   -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
-/* ----- collapsed stack effect ----- */
-.rtoast-list--collapsed .rtoast {
-  margin-top: calc(var(--rtoast-gap) * -1 + 4px);
+/* ----- collapsed stack effect -----
+   When collapsed (default, not expanded/hovered) the list tightens to a fixed
+   small gap regardless of the user's configured `gap`. Using the flex `gap`
+   property (instead of negative margins) means the visual gap is correct
+   for both column and column-reverse — fixing the inconsistent-gap bug. */
+.rtoast-list--collapsed {
+  gap: 6px;
 }
-.rtoast-list--collapsed .rtoast:first-child {
-  margin-top: 0;
+
+/* Subtle "stacked behind" hint for older toasts in collapsed mode.
+   Applied to the inner wrapper so framer-motion's transforms on the <li>
+   itself are untouched. */
+.rtoast-list--collapsed .rtoast .rtoast-inner {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.28s ease;
+}
+
+/* Top stacks: newest is first DOM child (visually on top) */
+.rtoast-list--collapsed.rtoast-list--top-left .rtoast:nth-child(2) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--top-center .rtoast:nth-child(2) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--top-right .rtoast:nth-child(2) .rtoast-inner {
+  transform: scale(0.965);
+  opacity: 0.88;
+}
+.rtoast-list--collapsed.rtoast-list--top-left .rtoast:nth-child(n+3) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--top-center .rtoast:nth-child(n+3) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--top-right .rtoast:nth-child(n+3) .rtoast-inner {
+  transform: scale(0.93);
+  opacity: 0.72;
+}
+
+/* Bottom stacks: newest is first DOM child (visually on bottom — closest
+   to viewport edge), so older toasts (higher index) should look stacked
+   behind */
+.rtoast-list--collapsed.rtoast-list--bottom-left .rtoast:nth-child(2) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--bottom-center .rtoast:nth-child(2) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--bottom-right .rtoast:nth-child(2) .rtoast-inner {
+  transform: scale(0.965);
+  opacity: 0.88;
+}
+.rtoast-list--collapsed.rtoast-list--bottom-left .rtoast:nth-child(n+3) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--bottom-center .rtoast:nth-child(n+3) .rtoast-inner,
+.rtoast-list--collapsed.rtoast-list--bottom-right .rtoast:nth-child(n+3) .rtoast-inner {
+  transform: scale(0.93);
+  opacity: 0.72;
+}
+
+.rtoast-list--expanded .rtoast .rtoast-inner {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.28s ease;
+  transform: none;
+  opacity: 1;
+}
+
+/* Per-toast hover scale: when expandOnHover is enabled, hovering any one
+   toast lifts only that toast back to full scale/opacity — the rest of
+   the stack stays in its collapsed peek state. */
+.rtoast-list--hover-expand.rtoast-list--collapsed .rtoast:hover .rtoast-inner,
+.rtoast-list--hover-expand.rtoast-list--collapsed .rtoast:focus-within .rtoast-inner {
+  transform: none;
+  opacity: 1;
 }
 
 /* ----- RTL support ----- */

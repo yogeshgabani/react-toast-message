@@ -59,6 +59,11 @@ export function ToastItem({
     toast.duration ??
     (toast.type === "loading" ? Infinity : defaultDuration);
 
+  // If the store has assigned a staggered absolute expiry, the timer
+  // runs against that instead of the raw `duration`. This keeps toasts
+  // dismissing FIFO even when many are created in the same tick.
+  const expiresAt = toast.expiresAt;
+
   const dismissible = toast.dismissible !== false;
   const closeButton = toast.closeButton ?? closeButtonDefault;
   const richColors = toast.richColors ?? richColorsDefault;
@@ -76,8 +81,13 @@ export function ToastItem({
 
   const paused = globalPaused || hovered || removing;
 
+  const initialRemaining =
+    typeof expiresAt === "number" && isFinite(expiresAt)
+      ? Math.max(0, expiresAt - Date.now())
+      : duration;
+
   const startedAtRef = useRef<number>(Date.now());
-  const remainingRef = useRef<number>(duration);
+  const remainingRef = useRef<number>(initialRemaining);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearTimer = () => {
@@ -101,8 +111,15 @@ export function ToastItem({
   closeRef.current = close;
 
   useEffect(() => {
-    remainingRef.current = duration;
-  }, [duration]);
+    // If the toast was given an absolute expiry by the store, prefer it
+    // (it has the FIFO stagger baked in). Otherwise fall back to the raw
+    // duration. Recomputed whenever either input changes — e.g. a promise
+    // toast transitioning loading -> success.
+    remainingRef.current =
+      typeof expiresAt === "number" && isFinite(expiresAt)
+        ? Math.max(0, expiresAt - Date.now())
+        : duration;
+  }, [duration, expiresAt]);
 
   useEffect(() => {
     if (!isFinite(remainingRef.current) || remainingRef.current <= 0) return;
@@ -121,7 +138,7 @@ export function ToastItem({
         clearTimer();
       }
     };
-  }, [paused, duration]);
+  }, [paused, duration, expiresAt]);
 
   const { variants, transition } = useMemo(
     () =>
@@ -232,9 +249,9 @@ export function ToastItem({
             style={toast.styles?.closeButton}
           />
         )}
-        {(toast.progressBar ?? false) && isFinite(duration) && duration > 0 && (
+        {(toast.progressBar ?? false) && isFinite(initialRemaining) && initialRemaining > 0 && (
           <ProgressBar
-            duration={duration}
+            duration={initialRemaining}
             paused={paused}
             className={toast.classNames?.progress}
             style={toast.styles?.progress}

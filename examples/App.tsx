@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode, } from "react";
+import { createPortal } from "react-dom";
 import { Toaster, toast } from "../src";
 import type {
   AnimationPreset,
@@ -207,7 +208,9 @@ import "react-toaster-message/styles.css";
       toast.success("Copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Copy failed", { description: "Clipboard access was blocked." });
+      toast.error("Copy failed", {
+        description: "Clipboard access was blocked.",
+      });
     }
   };
 
@@ -561,7 +564,7 @@ import "react-toaster-message/styles.css";
           </div>
 
           <div className="hero-content">
-            <span className="pill">v1.0.0 · Framer Motion · SSR-safe</span>
+            <span className="pill">V1.1.0 · Framer Motion · SSR-safe</span>
             <h1 className="title">
               Premium toasts
               <br />
@@ -574,10 +577,27 @@ import "react-toaster-message/styles.css";
             </p>
 
             <div className="hero-cta">
-              <code className="install">
-                <span className="prompt">$</span> npm install
-                react-toaster-message
-              </code>
+              <div className="install-stack">
+                <CopyableLine
+                  className="install"
+                  copyText="npm install react-toaster-message"
+                  label="Copy install command"
+                >
+                  <span className="prompt">$</span> npm install
+                  react-toaster-message
+                </CopyableLine>
+                <CopyableLine
+                  className="install install--import"
+                  copyText={`import "react-toaster-message/styles.css";`}
+                  label="Copy CSS import"
+                >
+                  <span className="import-kw">import</span>{" "}
+                  <span className="import-str">
+                    "react-toaster-message/styles.css"
+                  </span>
+                  ;
+                </CopyableLine>
+              </div>
               <button
                 className="primary-btn"
                 onClick={() =>
@@ -771,6 +791,7 @@ import "react-toaster-message/styles.css";
 
         <footer className="footer-card">
           <div className="footer-glow" aria-hidden />
+          {/* footer title */}
           <div className="footer-row footer-row-top">
             <div className="footer-brand">
               <div className="brand-mark footer-mark">
@@ -848,6 +869,19 @@ import "react-toaster-message/styles.css";
 
           <div className="footer-divider" />
 
+          {/* Social media — env-driven, falls back to a "Coming soon" toast */}
+          <div className="connect-row">
+            <div className="connect-headline">
+              <span className="connect-grad">Connect with Yogesh</span>
+              <span className="connect-sep">—</span>
+              <span className="connect-tag">
+                follow for updates &amp; new releases
+              </span>
+            </div>
+            <SocialIcons />
+          </div>
+
+          {/* footer end data */}
           <div className="footer-row footer-row-bottom">
             <div className="footer-meta">
               <div className="footer-meta-row">
@@ -985,6 +1019,532 @@ function Toggle({
       </span>
       <span className="toggle-label">{label}</span>
     </label>
+  );
+}
+
+/* A code-pill that has an inline copy button on the right. Used by the
+   hero install block so users can grab the npm command and the CSS import
+   in one click each. */
+function CopyableLine({
+  copyText,
+  label,
+  className,
+  children,
+}: {
+  copyText: string;
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error("Copy failed", {
+        description: "Clipboard access was blocked.",
+      });
+    }
+  };
+
+  return (
+    <code className={`${className ?? ""} copyable`.trim()}>
+      <span className="copyable-text">{children}</span>
+      <button
+        type="button"
+        className={`copyable-btn ${copied ? "is-copied" : ""}`}
+        onClick={handleCopy}
+        aria-label={copied ? "Copied" : label}
+        title={copied ? "Copied!" : label}
+      >
+        {copied ? (
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+          </svg>
+        )}
+      </button>
+    </code>
+  );
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   <SocialIcons />
+
+   URLs come from the env (Vite `import.meta.env.VITE_SOCIAL_*`). When a key
+   is missing or blank, clicking the icon opens a small "Data Not Available"
+   modal instead of navigating.
+
+   To wire real URLs: copy `examples/.env.example` → `examples/.env.local`
+   and fill in the values you want.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+interface SocialLink {
+  key: string;
+  label: string;
+  href: string;
+  brand: string; // brand color used on hover (light theme / default)
+  brandDark?: string; // optional override for dark theme (use when `brand` has poor contrast on dark bg)
+  icon: ReactNode;
+}
+
+const BRAND_GRADIENT =
+  "linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #6366f1 100%)";
+const BRAND_SHADOW =
+  "0 8px 20px -8px rgba(168, 85, 247, 0.55), 0 2px 6px rgba(99, 102, 241, 0.25)";
+
+/** Tracks the demo page's light/dark mode by observing the data attribute
+ *  that App.tsx already sets on <html>. Self-contained so the social-icons
+ *  block stays decoupled from App's state. */
+function useTheme() {
+  const [resolvedMode, setResolvedMode] = useState<"light" | "dark">(() => {
+    if (typeof document === "undefined") return "dark";
+    return (
+      (document.documentElement.dataset.pageTheme as "light" | "dark") ||
+      "dark"
+    );
+  });
+
+  useEffect(() => {
+    const read = () =>
+      setResolvedMode(
+        (document.documentElement.dataset.pageTheme as "light" | "dark") ||
+          "dark",
+      );
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-page-theme"],
+    });
+    return () => obs.disconnect();
+  }, []);
+
+  return { resolvedMode };
+}
+
+const SOCIALS: SocialLink[] = [
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    href: import.meta.env.VITE_SOCIAL_WHATSAPP || "",
+    brand: "#25D366",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "instagram",
+    label: "Instagram",
+    href: import.meta.env.VITE_SOCIAL_INSTAGRAM || "",
+    brand: "#E4405F",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.336 3.608 1.311.975.975 1.249 2.242 1.311 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.336 2.633-1.311 3.608-.975.975-2.242 1.249-3.608 1.311-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.336-3.608-1.311-.975-.975-1.249-2.242-1.311-3.608-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.062-1.366.336-2.633 1.311-3.608.975-.975 2.242-1.249 3.608-1.311 1.266-.058 1.646-.07 4.85-.07M12 0C8.741 0 8.332.014 7.052.072 5.197.157 3.355.673 2.014 2.014.673 3.355.157 5.197.072 7.052.014 8.332 0 8.741 0 12s.014 3.668.072 4.948c.085 1.855.601 3.697 1.942 5.038 1.341 1.341 3.183 1.857 5.038 1.942C8.332 23.986 8.741 24 12 24s3.668-.014 4.948-.072c1.855-.085 3.697-.601 5.038-1.942 1.341-1.341 1.857-3.183 1.942-5.038.058-1.28.072-1.689.072-4.948s-.014-3.668-.072-4.948c-.085-1.855-.601-3.697-1.942-5.038C20.645.673 18.803.157 16.948.072 15.668.014 15.259 0 12 0Zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324ZM12 16a4 4 0 110-8 4 4 0 010 8Zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    href: import.meta.env.VITE_SOCIAL_FACEBOOK || "",
+    brand: "#1877F2",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.019 4.388 11.005 10.125 11.927v-8.437H7.078v-3.49h3.047V9.413c0-3.017 1.792-4.687 4.533-4.687 1.312 0 2.686.235 2.686.235v2.97h-1.514c-1.491 0-1.956.93-1.956 1.886v2.255h3.328l-.532 3.49h-2.796V24C19.612 23.078 24 18.092 24 12.073Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    href: import.meta.env.VITE_SOCIAL_YOUTUBE || "",
+    brand: "#FF0000",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814ZM9.545 15.568V8.432L15.818 12l-6.273 3.568Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "twitter",
+    label: "X (Twitter)",
+    href: import.meta.env.VITE_SOCIAL_TWITTER || "",
+    brand: "#0F1419",
+    brandDark: "#E7E9EA",
+    icon: (
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    href: import.meta.env.VITE_SOCIAL_LINKEDIN || "",
+    brand: "#0A66C2",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286ZM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.063 2.063 0 112.063 2.065Zm1.782 13.019H3.555V9h3.564v11.452ZM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003Z" />
+      </svg>
+    ),
+  },
+  {
+    key: "github",
+    label: "GitHub",
+    href: import.meta.env.VITE_SOCIAL_GITHUB || "",
+    brand: "#24292F",
+    brandDark: "#F0F6FC",
+    icon: (
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23a11.52 11.52 0 013-.405c1.02.005 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12Z" />
+      </svg>
+    ),
+  },
+];
+
+function SocialIcons({ size = 36 }: { size?: number }) {
+  const { resolvedMode } = useTheme();
+  const isDark = resolvedMode === "dark";
+  const [missing, setMissing] = useState<SocialLink | null>(null);
+
+  // ESC closes the unavailable-link modal
+  useEffect(() => {
+    if (!missing) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMissing(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [missing]);
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        {SOCIALS.map((s) => {
+          const hoverColor = isDark && s.brandDark ? s.brandDark : s.brand;
+          const available = Boolean(s.href);
+          return (
+            <a
+              key={s.key}
+              href={available ? s.href : "#"}
+              target={available ? "_blank" : undefined}
+              rel="noreferrer noopener"
+              aria-label={available ? s.label : `${s.label} — not available`}
+              title={available ? s.label : `${s.label} — not configured yet`}
+              onClick={(e) => {
+                if (!available) {
+                  e.preventDefault();
+                  setMissing(s);
+                }
+              }}
+              style={{
+                width: size,
+                height: size,
+                borderRadius: 999,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "inherit",
+                background: "color-mix(in srgb, currentColor 4%, transparent)",
+                border:
+                  "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+                textDecoration: "none",
+                transition: "all 180ms ease",
+                opacity: available ? 1 : 0.65,
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `color-mix(in srgb, ${hoverColor} 14%, transparent)`;
+                e.currentTarget.style.borderColor = `color-mix(in srgb, ${hoverColor} 55%, transparent)`;
+                e.currentTarget.style.color = hoverColor;
+                e.currentTarget.style.transform = "translateY(-2px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background =
+                  "color-mix(in srgb, currentColor 4%, transparent)";
+                e.currentTarget.style.borderColor =
+                  "color-mix(in srgb, currentColor 12%, transparent)";
+                e.currentTarget.style.color = "inherit";
+                e.currentTarget.style.transform = "";
+              }}
+            >
+              {s.icon}
+            </a>
+          );
+        })}
+      </div>
+      {missing && (
+        <SocialUnavailableModal
+          social={missing}
+          onClose={() => setMissing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function SocialUnavailableModal({
+  social,
+  onClose,
+}: {
+  social: SocialLink;
+  onClose: () => void;
+}) {
+  // Match the chip's contrast logic: brands like X (#0F1419) and GitHub
+  // (#24292F) disappear against a dark modal surface, so fall back to the
+  // `brandDark` override in dark mode.
+  const { resolvedMode } = useTheme();
+  const isDark = resolvedMode === "dark";
+  const displayBrand =
+    isDark && social.brandDark ? social.brandDark : social.brand;
+
+  // Prevent body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  // Render via portal so the fixed-positioned backdrop is centered on the
+  // viewport, not trapped inside an ancestor that creates a containing
+  // block (e.g. `.footer-card` uses `backdrop-filter`, which — together with
+  // `filter` / `transform` / `perspective` — confines `position: fixed`
+  // descendants to that ancestor's box).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rnl-social-modal-title"
+      aria-describedby="rnl-social-modal-desc"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0, 0, 0, 0.58)",
+        backdropFilter: "blur(6px)",
+        WebkitBackdropFilter: "blur(6px)",
+        padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "relative",
+          maxWidth: 380,
+          width: "100%",
+          background: "var(--bg-2)",
+          color: "inherit",
+          borderRadius: 16,
+          padding: "32px 24px 24px",
+          border:
+            "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.4)",
+          textAlign: "center",
+          overflow: "hidden",
+        }}
+      >
+        {/* Top gradient border */}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 3,
+            background:
+              "linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)",
+          }}
+        />
+
+        {/* Close X (top-right) */}
+        <button
+          aria-label="Close"
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            border: "none",
+            background: "transparent",
+            color: "inherit",
+            cursor: "pointer",
+            fontSize: 20,
+            lineHeight: 1,
+            opacity: 0.55,
+            transition: "opacity 160ms, background 160ms",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = "1";
+            e.currentTarget.style.background =
+              "color-mix(in srgb, currentColor 8%, transparent)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = "0.55";
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          ×
+        </button>
+
+        {/* Big social icon — uses brandDark in dark mode so deeply-tinted
+            brands (X #0F1419, GitHub #24292F) stay visible against the
+            dark modal surface. */}
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            margin: "0 auto 16px",
+            borderRadius: "50%",
+            background: `color-mix(in srgb, ${displayBrand} 16%, transparent)`,
+            color: displayBrand,
+            border: `1px solid color-mix(in srgb, ${displayBrand} 35%, transparent)`,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ transform: "scale(1.7)" }}>{social.icon}</div>
+        </div>
+
+        <h3
+          id="rnl-social-modal-title"
+          style={{
+            margin: "0 0 8px",
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Data Not Available
+        </h3>
+        <p
+          id="rnl-social-modal-desc"
+          style={{
+            margin: "0 0 20px",
+            fontSize: 13,
+            color: "var(--text-mute, #52525b)",
+            lineHeight: 1.55,
+          }}
+        >
+          The <strong style={{ color: "inherit" }}>{social.label}</strong> link
+          hasn&apos;t been configured yet. Please check back later.
+        </p>
+
+        <button
+          onClick={onClose}
+          style={{
+            padding: "8px 22px",
+            borderRadius: 999,
+            border: "none",
+            background: BRAND_GRADIENT,
+            color: "#fff",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            boxShadow: BRAND_SHADOW,
+            transition: "transform 160ms",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "";
+          }}
+        >
+          Got it
+        </button>
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1263,6 +1823,12 @@ body {
   flex-wrap: wrap;
   align-items: center;
 }
+.install-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
 .install {
   display: inline-flex;
   align-items: center;
@@ -1280,6 +1846,71 @@ body {
   word-break: break-word;
 }
 .install .prompt { color: var(--text-mute); }
+.install--import {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-strong));
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+.install--import .import-kw { color: var(--accent-3); font-weight: 600; }
+.install--import .import-str { color: var(--accent-2); }
+
+/* Inline copy button inside the install pills */
+.install.copyable {
+  position: relative;
+  padding-right: 44px;            /* reserve room for the button */
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.copyable-text {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.copyable-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  appearance: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-soft);
+  cursor: pointer;
+  font: inherit;
+  transition:
+    background .15s ease,
+    border-color .15s ease,
+    color .15s ease,
+    transform .15s ease;
+}
+.copyable-btn:hover {
+  background: var(--surface-strong);
+  border-color: var(--border-strong);
+  color: var(--text);
+  transform: translateY(-50%) scale(1.05);
+}
+.copyable-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+.copyable-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.copyable-btn.is-copied {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-color: transparent;
+  color: #fff;
+}
 .primary-btn {
   appearance: none;
   border: none;
@@ -1330,10 +1961,18 @@ body {
   color: var(--text-soft);
   font-size: 14px;
 }
+/* 6 controls — lay them out as a clean 3×2 on wide screens so the bottom
+   row never ends up with a trailing empty cell. Falls back to 2-col then
+   1-col at smaller widths via the media queries below. */
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+@media (max-width: 1024px) {
+  .control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .control {
   display: flex;
@@ -1790,6 +2429,38 @@ body {
   background: linear-gradient(90deg, transparent, var(--border), transparent);
 }
 
+/* CONNECT / SOCIAL ROW */
+.connect-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.connect-headline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+.connect-grad {
+  background: linear-gradient(120deg, var(--accent-3), var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 700;
+}
+.connect-sep { opacity: 0.4; }
+.connect-tag { font-weight: 400; color: var(--text-mute); }
+
+/* SocialIcons styles itself inline; the modal too. Kept .connect-* only. */
+
 .footer-row-bottom { gap: 12px 18px; }
 .footer-meta {
   display: flex;
@@ -1888,7 +2559,7 @@ body {
   .hero-top { margin-bottom: 44px; gap: 12px; flex-wrap: wrap; }
   .main { padding: 0 20px 64px; gap: 24px; }
   .control-card { padding: 20px; }
-  .control-grid { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
+  .control-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .snippet-card { padding: 18px 20px 20px; }
   .snippet { padding: 16px 18px; font-size: 12.5px; }
   .tab { flex: 1 1 140px; padding: 9px 14px; }
@@ -1954,6 +2625,8 @@ body {
   .footer-divider { margin: 16px 0 14px; }
   .footer-row-bottom { flex-direction: column; align-items: flex-start; gap: 14px; }
   .footer-author { width: 100%; justify-content: center; }
+
+  .connect-row { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 
 /* Small phones */

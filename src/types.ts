@@ -118,6 +118,10 @@ export interface ToastData extends Omit<ToastOptions, "id"> {
   type: ToastType;
   title?: ReactNode;
   createdAt: number;
+  /** Absolute timestamp (ms) at which the toast should auto-dismiss.
+   *  Computed by the store with a FIFO stagger so toasts created near each
+   *  other still close one-by-one in the order they appeared. */
+  expiresAt?: number;
   custom?: (toast: ToastData) => ReactNode;
   promise?: Promise<unknown>;
 }

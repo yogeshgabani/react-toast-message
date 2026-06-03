@@ -34,7 +34,7 @@ export function Toaster(props: ToasterProps) {
     richColors = false,
     closeButton = false,
     duration = 4000,
-    maxVisibleToasts = 3,
+    maxVisibleToasts = Infinity,
     visibleToasts,
     gap = 14,
     offset = "1rem",
@@ -54,8 +54,8 @@ export function Toaster(props: ToasterProps) {
 
   const toasts = useToastStore((s) => s.toasts);
   const setMaxVisible = useToastStore((s) => s.setMaxVisible);
+  const setDefaultDuration = useToastStore((s) => s.setDefaultDuration);
   const setPaused = useToastStore((s) => s.setPaused);
-  const setExpanded = useToastStore((s) => s.setExpanded);
   const expanded = useToastStore((s) => s.expanded);
 
   const [mounted, setMounted] = useState(false);
@@ -68,6 +68,10 @@ export function Toaster(props: ToasterProps) {
   useEffect(() => {
     setMaxVisible(max);
   }, [max, setMaxVisible]);
+
+  useEffect(() => {
+    setDefaultDuration(duration);
+  }, [duration, setDefaultDuration]);
 
   // Window blur pause
   useEffect(() => {
@@ -142,7 +146,7 @@ export function Toaster(props: ToasterProps) {
             ref={pos === position ? containerRef : undefined}
             className={`rtoast-list rtoast-list--${pos} ${
               isExpanded ? "rtoast-list--expanded" : "rtoast-list--collapsed"
-            }`}
+            } ${expandOnHover ? "rtoast-list--hover-expand" : ""}`.trim()}
             style={{
               ...getOffsetStyle(pos, String(offset)),
               ["--rtoast-gap" as never]: `${gap}px`,
@@ -151,11 +155,9 @@ export function Toaster(props: ToasterProps) {
             tabIndex={-1}
             aria-label="Notifications"
             onMouseEnter={() => {
-              if (expandOnHover) setExpanded(true);
               if (pauseOnHover) setPaused(true);
             }}
             onMouseLeave={() => {
-              if (expandOnHover) setExpanded(false);
               if (pauseOnHover) setPaused(false);
             }}
           >
