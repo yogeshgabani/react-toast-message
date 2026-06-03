@@ -564,7 +564,7 @@ import "react-toaster-message/styles.css";
           </div>
 
           <div className="hero-content">
-            <span className="pill">V1.1.0 · Framer Motion · SSR-safe</span>
+            <span className="pill">V1.1.1 · Framer Motion · SSR-safe</span>
             <h1 className="title">
               Premium toasts
               <br />
