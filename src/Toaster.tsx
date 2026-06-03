@@ -161,7 +161,7 @@ export function Toaster(props: ToasterProps) {
               if (pauseOnHover) setPaused(false);
             }}
           >
-            <AnimatePresence initial={false} mode="popLayout">
+            <AnimatePresence initial mode="popLayout">
               {list.map((toast, idx) => (
                 <ToastItem
                   key={toast.id}
