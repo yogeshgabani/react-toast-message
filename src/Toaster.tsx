@@ -56,9 +56,13 @@ export function Toaster(props: ToasterProps) {
   const setMaxVisible = useToastStore((s) => s.setMaxVisible);
   const setDefaultDuration = useToastStore((s) => s.setDefaultDuration);
   const setPaused = useToastStore((s) => s.setPaused);
+  const paused = useToastStore((s) => s.paused);
   const expanded = useToastStore((s) => s.expanded);
 
   const [mounted, setMounted] = useState(false);
+  // Which position group the cursor is currently over — hovering a
+  // collapsed stack expands the whole stack (sonner behaviour).
+  const [hoverPos, setHoverPos] = useState<ToastPosition | null>(null);
   const containerRef = useRef<HTMLOListElement | null>(null);
 
   useEffect(() => {
@@ -126,9 +130,41 @@ export function Toaster(props: ToasterProps) {
     return map;
   }, [toasts, position]);
 
-  if (!mounted) return null;
+  // Toasts beyond the visible cap are kept in the store but not rendered,
+  // so no per-item timer runs for them. Expire them straight from the
+  // store — otherwise they'd pile up invisibly and never auto-dismiss.
+  useEffect(() => {
+    if (paused || !isFinite(max)) return;
+    const overflow: ToastData[] = [];
+    let earliest = Infinity;
+    for (const pos of POSITION_LIST) {
+      for (const t of grouped[pos].slice(max)) {
+        overflow.push(t);
+        if (
+          typeof t.expiresAt === "number" &&
+          isFinite(t.expiresAt) &&
+          t.expiresAt < earliest
+        ) {
+          earliest = t.expiresAt;
+        }
+      }
+    }
+    if (!isFinite(earliest)) return;
+    const timer = setTimeout(() => {
+      const now = Date.now();
+      const store = useToastStore.getState();
+      for (const t of overflow) {
+        if (typeof t.expiresAt === "number" && t.expiresAt <= now) {
+          t.onAutoClose?.(t);
+          t.onDismiss?.(t);
+          store.dismiss(t.id);
+        }
+      }
+    }, Math.max(0, earliest - Date.now()));
+    return () => clearTimeout(timer);
+  }, [grouped, max, paused]);
 
-  const isExpanded = expand || expanded;
+  if (!mounted) return null;
 
   return createPortal(
     <div
@@ -140,6 +176,11 @@ export function Toaster(props: ToasterProps) {
       {POSITION_LIST.map((pos) => {
         const list = grouped[pos];
         if (!list || list.length === 0) return null;
+        // Newest `max` toasts stay on screen; older ones are pushed out
+        // (they keep expiring in the background via the effect above).
+        const visibleList = isFinite(max) ? list.slice(0, max) : list;
+        const isExpanded =
+          expand || expanded || (expandOnHover && hoverPos === pos);
         return (
           <ol
             key={pos}
@@ -156,13 +197,15 @@ export function Toaster(props: ToasterProps) {
             aria-label="Notifications"
             onMouseEnter={() => {
               if (pauseOnHover) setPaused(true);
+              setHoverPos(pos);
             }}
             onMouseLeave={() => {
               if (pauseOnHover) setPaused(false);
+              setHoverPos(null);
             }}
           >
             <AnimatePresence initial mode="popLayout">
-              {list.map((toast, idx) => (
+              {visibleList.map((toast, idx) => (
                 <ToastItem
                   key={toast.id}
                   toast={{
@@ -170,7 +213,7 @@ export function Toaster(props: ToasterProps) {
                     ...toast,
                   }}
                   index={idx}
-                  total={list.length}
+                  total={visibleList.length}
                   position={pos}
                   defaultDuration={duration}
                   defaultAnimation={animation}

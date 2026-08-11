@@ -13,7 +13,6 @@ const STAGGER_MS = 600;
 
 interface ToastStoreState {
   toasts: ToastData[];
-  queue: ToastData[];
   maxVisible: number;
   defaultDuration: number;
   paused: boolean;
@@ -27,7 +26,6 @@ interface ToastStoreState {
   upsert: (toast: ToastData) => string | number;
   dismiss: (id?: string | number) => void;
   remove: (id?: string | number) => void;
-  promote: () => void;
 }
 
 function computeExpiresAt(
@@ -56,7 +54,6 @@ function computeExpiresAt(
 
 export const useToastStore = create<ToastStoreState>((set, get) => ({
   toasts: [],
-  queue: [],
   maxVisible: Infinity,
   defaultDuration: 4000,
   paused: false,
@@ -70,22 +67,20 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
 
   add: (toast) => {
     const state = get();
-    const all = [...state.toasts, ...state.queue];
     const withExpiry: ToastData = {
       ...toast,
-      expiresAt: computeExpiresAt(toast, all, state.defaultDuration),
+      expiresAt: computeExpiresAt(toast, state.toasts, state.defaultDuration),
     };
-    if (state.toasts.length >= state.maxVisible) {
-      set({ queue: [...state.queue, withExpiry] });
-    } else {
-      set({ toasts: [withExpiry, ...state.toasts] });
-    }
+    // Sonner-style: every new toast enters the active list immediately.
+    // When there are more toasts than `maxVisible`, the renderer hides the
+    // oldest ones — the newest toast is always the one on screen.
+    set({ toasts: [withExpiry, ...state.toasts] });
     return withExpiry.id;
   },
 
   update: (id, patch) => {
     const state = get();
-    const all = [...state.toasts, ...state.queue];
+    const all = state.toasts;
 
     const patchToast = (t: ToastData): ToastData => {
       if (t.id !== id) return t;
@@ -107,15 +102,13 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
 
     set((s) => ({
       toasts: s.toasts.map(patchToast),
-      queue: s.queue.map(patchToast),
     }));
   },
 
   upsert: (toast) => {
     const state = get();
-    const existsActive = state.toasts.some((t) => t.id === toast.id);
-    const existsQueued = state.queue.some((t) => t.id === toast.id);
-    if (existsActive || existsQueued) {
+    const exists = state.toasts.some((t) => t.id === toast.id);
+    if (exists) {
       get().update(toast.id, toast);
       return toast.id;
     }
@@ -124,33 +117,15 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
 
   dismiss: (id) => {
     if (id === undefined) {
-      set({ toasts: [], queue: [] });
+      set({ toasts: [] });
       return;
     }
     set((s) => ({
       toasts: s.toasts.filter((t) => t.id !== id),
-      queue: s.queue.filter((t) => t.id !== id),
     }));
-    // promote next queued toast
-    setTimeout(() => get().promote(), 0);
   },
 
   remove: (id) => get().dismiss(id),
-
-  promote: () => {
-    const { toasts, queue, maxVisible, defaultDuration } = get();
-    if (queue.length === 0) return;
-    if (toasts.length >= maxVisible) return;
-    const [next, ...rest] = queue;
-    if (!next) return;
-    // Recompute expiry from "now" — the toast has been waiting in the
-    // queue and its original expiresAt is stale.
-    const promoted: ToastData = {
-      ...next,
-      expiresAt: computeExpiresAt(next, toasts, defaultDuration),
-    };
-    set({ toasts: [promoted, ...toasts], queue: rest });
-  },
 }));
 
 export function createToastData(

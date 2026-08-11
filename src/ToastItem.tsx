@@ -1,5 +1,12 @@
 import { motion, useReducedMotion, type PanInfo } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { ActionButton } from "./components/ActionButton";
 import { CloseButton } from "./components/CloseButton";
@@ -40,17 +47,20 @@ function resolveSwipe(
   return "x";
 }
 
-export function ToastItem({
-  toast,
-  index,
-  total,
-  position,
-  defaultDuration,
-  defaultAnimation,
-  expand,
-  closeButtonDefault,
-  richColorsDefault,
-}: ToastItemProps) {
+function ToastItemInner(
+  {
+    toast,
+    index,
+    total,
+    position,
+    defaultDuration,
+    defaultAnimation,
+    expand,
+    closeButtonDefault,
+    richColorsDefault,
+  }: ToastItemProps,
+  ref: React.ForwardedRef<HTMLLIElement>,
+) {
   const dismiss = useToastStore((s) => s.dismiss);
   const globalPaused = useToastStore((s) => s.paused);
   const prefersReducedMotion = useReducedMotion();
@@ -81,10 +91,11 @@ export function ToastItem({
 
   const paused = globalPaused || hovered || removing;
 
-  const initialRemaining =
-    typeof expiresAt === "number" && isFinite(expiresAt)
-      ? Math.max(0, expiresAt - Date.now())
-      : duration;
+  const hasExpiry = typeof expiresAt === "number" && isFinite(expiresAt);
+
+  const initialRemaining = hasExpiry
+    ? Math.max(0, (expiresAt as number) - Date.now())
+    : duration;
 
   const startedAtRef = useRef<number>(Date.now());
   const remainingRef = useRef<number>(initialRemaining);
@@ -122,13 +133,21 @@ export function ToastItem({
   }, [duration, expiresAt]);
 
   useEffect(() => {
-    if (!isFinite(remainingRef.current) || remainingRef.current <= 0) return;
+    // A toast with an absolute expiry always gets a timer — remaining can
+    // legitimately be 0 if it expired while hidden behind the visible cap
+    // (it should then close as soon as it re-appears). Without an expiry,
+    // duration <= 0 / Infinity means "sticky", so no timer.
+    if (
+      !hasExpiry &&
+      (!isFinite(remainingRef.current) || remainingRef.current <= 0)
+    )
+      return;
     if (paused) return;
 
     startedAtRef.current = Date.now();
     timerRef.current = setTimeout(
       () => closeRef.current("auto"),
-      remainingRef.current,
+      Math.max(0, remainingRef.current),
     );
 
     return () => {
@@ -147,6 +166,42 @@ export function ToastItem({
         : getVariants(animation, position),
     [animation, position, prefersReducedMotion],
   );
+
+  // ----- collapsed stack (sonner-style) -----
+  // When the list is not expanded, older toasts tuck behind the newest
+  // one: each level peeks out by a small offset toward the screen edge
+  // and scales down slightly. Beyond the 3rd level they fade out entirely.
+  const STACK_PEEK = 14;
+  const STACK_SCALE_STEP = 0.06;
+  const STACK_MAX_VISIBLE = 3;
+
+  const isTopPos = position.startsWith("top");
+  const stacked = !expand;
+  const level = Math.min(index, STACK_MAX_VISIBLE);
+  const stackY = stacked ? (isTopPos ? 1 : -1) * level * STACK_PEEK : 0;
+  const stackScale = stacked ? 1 - level * STACK_SCALE_STEP : 1;
+  const stackHidden = stacked && index >= STACK_MAX_VISIBLE;
+
+  // Only the front toast stays in normal flow (it gives the list its
+  // height); the rest are pinned to the screen-edge and offset via the
+  // animated transform above.
+  const stackPositionStyle: React.CSSProperties =
+    stacked && index > 0
+      ? isTopPos
+        ? { position: "absolute", top: 0, left: 0, right: 0 }
+        : { position: "absolute", bottom: 0, left: 0, right: 0 }
+      : {};
+
+  const baseAnimate =
+    typeof variants.animate === "object" && variants.animate !== null
+      ? variants.animate
+      : {};
+  const animateTarget = {
+    ...baseAnimate,
+    y: stackY,
+    scale: stackScale,
+    ...(stackHidden ? { opacity: 0 } : {}),
+  };
 
   const swipe = resolveSwipe(toast.swipeDirection, position);
   const draggable = toast.draggable !== false;
@@ -175,15 +230,25 @@ export function ToastItem({
   const ariaLive =
     toast.type === "error" || toast.type === "warning" ? "assertive" : "polite";
 
-  const colorClass = richColors
-    ? `rtoast--rich rtoast--rich-${toast.type}`
-    : "";
-  const variantClass =
-    variant === "glass"
-      ? "rtoast--glass"
-      : variant === "gradient"
-      ? `rtoast--gradient rtoast--gradient-${toast.type}`
+  // Rich colors tint the default surface. Glass/gradient variants bring
+  // their own background, and `.rtoast--rich`'s higher specificity would
+  // paint over it — so an explicitly requested variant wins over the
+  // global richColors flag.
+  const colorClass =
+    richColors && variant === "default"
+      ? `rtoast--rich rtoast--rich-${toast.type}`
       : "";
+  // glass/accent are type-agnostic; every other non-default variant gets a
+  // per-type class (e.g. rtoast--solid rtoast--solid-success) so CSS can
+  // color it semantically.
+  const variantClass =
+    variant === "default"
+      ? ""
+      : variant === "glass"
+      ? "rtoast--glass"
+      : variant === "accent"
+      ? "rtoast--accent"
+      : `rtoast--${variant} rtoast--${variant}-${toast.type}`;
 
   const baseClass = [
     "rtoast",
@@ -263,6 +328,7 @@ export function ToastItem({
 
   return (
     <motion.li
+      ref={ref}
       layout
       role={role}
       aria-live={ariaLive}
@@ -272,12 +338,15 @@ export function ToastItem({
       data-position={position}
       className={baseClass}
       style={{
+        zIndex: total - index,
+        ...stackPositionStyle,
+        ...(stackHidden ? { pointerEvents: "none" as const } : {}),
         ...toast.style,
         ...toast.styles?.toast,
       }}
       variants={variants}
       initial="initial"
-      animate="animate"
+      animate={animateTarget}
       exit="exit"
       transition={transition}
       onMouseEnter={() => setHovered(true)}
@@ -291,3 +360,7 @@ export function ToastItem({
     </motion.li>
   );
 }
+
+// forwardRef so AnimatePresence's popLayout mode can measure the element
+// when it exits (it attaches a ref to the direct child).
+export const ToastItem = forwardRef(ToastItemInner);

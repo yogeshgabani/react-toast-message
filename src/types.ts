@@ -18,7 +18,13 @@ export type ToastPosition =
   | "bottom-center"
   | "bottom-right";
 
-export type ToastTheme = "light" | "dark" | "system" | "glass" | "gradient";
+export type ToastTheme =
+  | "light"
+  | "dark"
+  | "system"
+  | "glass"
+  | "gradient"
+  | "accent";
 
 export type AnimationPreset =
   | "slide"
@@ -58,7 +64,21 @@ export type AosAnimation =
 
 export type SwipeDirection = "x" | "y" | "auto";
 
-export type ToastVisualVariant = "default" | "glass" | "gradient";
+export type ToastVisualVariant =
+  | "default"
+  | "glass"
+  | "gradient"
+  | "accent"
+  | "solid"
+  | "soft"
+  | "outline"
+  | "neon"
+  | "left-border"
+  | "right-border"
+  | "x-border"
+  | "top-border"
+  | "bottom-border"
+  | "y-border";
 
 export interface ToastAction {
   label: ReactNode;

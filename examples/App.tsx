@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode, } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Toaster, toast } from "../src";
 import type {
@@ -6,6 +6,7 @@ import type {
   AosAnimation,
   ToastPosition,
   ToastTheme,
+  ToastVisualVariant,
 } from "../src";
 import "../src/styles.css";
 
@@ -22,6 +23,9 @@ type Demo = {
   description: string;
   icon: string;
   category: DemoCategory;
+  /** Copy-paste-ready source for this demo — shown live in the
+   *  "Current setup" snippet when the card is clicked. */
+  code: string;
   run: () => void;
 };
 
@@ -65,6 +69,23 @@ const ANIMATIONS: AnimationPreset[] = [
   "bounce",
 ];
 
+const VARIANTS: ToastVisualVariant[] = [
+  "default",
+  "accent",
+  "solid",
+  "soft",
+  "outline",
+  "neon",
+  "glass",
+  "gradient",
+  "left-border",
+  "right-border",
+  "x-border",
+  "top-border",
+  "bottom-border",
+  "y-border",
+];
+
 const CATEGORIES: { id: DemoCategory; label: string; hint: string }[] = [
   { id: "basics", label: "Basics", hint: "Five core toast types" },
   { id: "variants", label: "Variants", hint: "Glass, gradient, rich colors" },
@@ -76,6 +97,182 @@ const CATEGORIES: { id: DemoCategory; label: string; hint: string }[] = [
   { id: "animations", label: "Animations", hint: "AOS-inspired entrances" },
   { id: "advanced", label: "Advanced", hint: "Queue, stack & control" },
 ];
+
+/* ───────── Site stats (photo-style strip) + What's New changelog ───────── */
+
+const SITE_LAST_UPDATED = "August 11, 2026";
+const STATS_NAMESPACE = "react-toaster-message-demo";
+const SESSION_VISIT_FLAG = "rtm_visited";
+const WHATS_NEW_STORAGE_KEY = "rtm-whatsnew-seen";
+
+type ChangelogSectionKind =
+  | "added"
+  | "changed"
+  | "fixed"
+  | "technical"
+  | "docs";
+type ChangelogSection = {
+  kind: ChangelogSectionKind;
+  title: string;
+  items: string[];
+};
+type ChangelogEntry = {
+  version: string;
+  date: string;
+  highlight?: string;
+  isLatest?: boolean;
+  sections: ChangelogSection[];
+};
+
+const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.2.0",
+    date: "August 11, 2026",
+    highlight:
+      "Sonner-style collapsed stack, 11 new visual variants (accent, solid, soft, outline, neon + 6 border-bar styles), accent theme, and smarter maxVisibleToasts.",
+    isLatest: true,
+    sections: [
+      {
+        kind: "added",
+        title: "Added",
+        items: [
+          "**Sonner-style collapsed stack** — older toasts tuck behind the newest one; hovering the stack expands it into the full list (`expand` / `expandOnHover`).",
+          "**11 new visual variants** — `accent`, `solid`, `soft`, `outline`, `neon`, plus 6 border-bar styles: `left-border`, `right-border`, `x-border`, `top-border`, `bottom-border`, `y-border`.",
+          "**`theme=\"accent\"`** — rounded color bar on every toast in the portal.",
+          "Demo playground: variant selector, custom gradient color picker, and a live copy-paste snippet that mirrors your selections.",
+        ],
+      },
+      {
+        kind: "changed",
+        title: "Changed",
+        items: [
+          "**`maxVisibleToasts` is now sonner-style** — the newest toasts always show and the oldest slide out (previously new toasts waited in a hidden queue). Hidden toasts keep expiring in the background.",
+          "An explicit per-toast `variant` (`glass`, `gradient`, …) now wins over the global `richColors` flag.",
+        ],
+      },
+      {
+        kind: "fixed",
+        title: "Fixed",
+        items: [
+          "Gradient/glass variant backgrounds were painted over when `richColors` was enabled.",
+          "React `forwardRef` warning from `AnimatePresence`'s popLayout mode.",
+        ],
+      },
+      {
+        kind: "technical",
+        title: "Technical",
+        items: [
+          "Internal `queue` array and `promote()` were removed from `useToastStore` — the `toast` API and all `<Toaster />` props are unchanged.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.1.1",
+    date: "June 3, 2026",
+    highlight:
+      "Polish release — smoother default toast animation timing out of the box.",
+    sections: [
+      {
+        kind: "changed",
+        title: "Changed",
+        items: [
+          "**Default animation tuned** — the `Toaster` now ships with refined enter/exit animation settings for a smoother feel without any config.",
+          "Demo playground defaults updated to match the new animation settings.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.1.0",
+    date: "June 3, 2026",
+    highlight:
+      "FIFO-accurate auto-dismissal via absolute expiry timestamps, unlimited visible toasts by default, and system color-scheme support.",
+    sections: [
+      {
+        kind: "added",
+        title: "Added",
+        items: [
+          "**Absolute expiry timestamps** — every toast now carries an `expiresAt` value, so toasts always dismiss in FIFO order even when many are created in the same instant.",
+          "**Stagger effect** — the store computes expiry times with a small stagger, so rapid-fire toasts leave one by one instead of vanishing together.",
+          "**System color-scheme support** — styles now respect the OS light/dark preference.",
+          "Optional `expiresAt` property exposed on the toast data type.",
+        ],
+      },
+      {
+        kind: "changed",
+        title: "Changed",
+        items: [
+          "`Toaster` allows an **infinite number of visible toasts** by default (`maxVisibleToasts={Infinity}`).",
+          "`ToastItem` uses the new expiry logic with adjusted duration handling.",
+          "Improved CSS for better visual consistency and hover effects.",
+        ],
+      },
+      {
+        kind: "docs",
+        title: "Documentation",
+        items: [
+          "README overhauled — new sections covering queue behaviour, expiry timing and the refreshed demo playground.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.0.0",
+    date: "May 25, 2026",
+    highlight: "First stable release — the API now follows semver.",
+    sections: [
+      {
+        kind: "added",
+        title: "Added",
+        items: [
+          "Complete toast API — `toast()`, `toast.success` / `error` / `warning` / `info` / `loading`, `toast.promise`, `toast.update` and `toast.dismiss`.",
+          "Five animation presets (slide, blur-fade, scale, spring, bounce) plus 20 AOS-inspired entrance animations.",
+          "Variants — glass, gradient, accent bars and rich semantic colors, with custom gradient palettes via CSS variables.",
+          "Six positions, swipe-to-dismiss, queue management with `maxVisibleToasts`, expand-on-hover stacking.",
+          "Action / cancel buttons, progress bar, custom icons, sticky (non-expiring) toasts.",
+          "Themes — light, dark, system, glass and gradient. SSR-safe rendering.",
+        ],
+      },
+      {
+        kind: "technical",
+        title: "Technical",
+        items: [
+          "Tree-shakeable ESM + CJS dual build powered by Framer Motion.",
+          "Sticky navigation and scroll-to-top button on the demo site.",
+        ],
+      },
+    ],
+  },
+];
+
+const LATEST_VERSION = CHANGELOG[0]!.version;
+
+/* Renders the tiny markdown-ish syntax used in changelog items:
+   **bold** and `code`. Deterministic content, so a full parser is
+   unnecessary — mirrors the approach of highlightCode below. */
+function renderRich(text: string): ReactNode[] {
+  const re = /\*\*([^*]+)\*\*|`([^`]+)`/g;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(
+      m[1] !== undefined ? (
+        <strong key={key++}>{m[1]}</strong>
+      ) : (
+        <code key={key++} className="wn-code">
+          {m[2]}
+        </code>
+      ),
+    );
+    last = m.index + m[0].length;
+  }
+  out.push(text.slice(last));
+  return out;
+}
 
 type GradientPalette = {
   id: string;
@@ -141,6 +338,122 @@ const GRADIENT_PALETTES: GradientPalette[] = [
   },
 ];
 
+/* ── Live visitor stats — free counter API (abacus.jasoncameron.dev).
+   "hits" increments on every load; "visitors" only once per browser
+   session (sessionStorage flag). Fails silently to "—" offline. ── */
+type VisitorStats = {
+  hits: number | null;
+  visitors: number | null;
+};
+
+function useVisitorStats(): VisitorStats {
+  const [stats, setStats] = useState<VisitorStats>({
+    hits: null,
+    visitors: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchJson = async (url: string) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = (await res.json()) as { value?: number };
+        return typeof data.value === "number" ? data.value : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const load = async () => {
+      const hitsUrl = `https://abacus.jasoncameron.dev/hit/${STATS_NAMESPACE}/hits`;
+      const alreadyVisited =
+        typeof window !== "undefined" &&
+        window.sessionStorage.getItem(SESSION_VISIT_FLAG) === "1";
+      const visitorsUrl = alreadyVisited
+        ? `https://abacus.jasoncameron.dev/get/${STATS_NAMESPACE}/visitors`
+        : `https://abacus.jasoncameron.dev/hit/${STATS_NAMESPACE}/visitors`;
+
+      const [hits, visitors] = await Promise.all([
+        fetchJson(hitsUrl),
+        fetchJson(visitorsUrl),
+      ]);
+
+      if (cancelled) return;
+      if (!alreadyVisited && visitors !== null) {
+        window.sessionStorage.setItem(SESSION_VISIT_FLAG, "1");
+      }
+      setStats({ hits, visitors });
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return stats;
+}
+
+/* Eases a number from 0 → target so the stat cards count up on load. */
+function useCountUp(target: number | null, durationMs = 1400): number | null {
+  const [value, setValue] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (target === null) {
+      setValue(null);
+      return;
+    }
+    let raf = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs]);
+
+  return value;
+}
+
+const formatStat = (n: number | null) =>
+  n === null ? "—" : n.toLocaleString("en-US");
+
+/* Tiny regex highlighter for the generated snippet — the snippet is our
+   own deterministic output, so a full parser isn't needed. */
+function highlightCode(code: string): ReactNode[] {
+  const re =
+    /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(import|from|const|let|for|return|new)\b|\b(toast|Toaster)\b|\b(\d+|Infinity|true|false)\b/g;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(code))) {
+    if (m.index > last) out.push(code.slice(last, m.index));
+    const cls = m[1]
+      ? "tok-comment"
+      : m[2]
+        ? "tok-string"
+        : m[3]
+          ? "tok-kw"
+          : m[4]
+            ? "tok-fn"
+            : "tok-num";
+    out.push(
+      <span key={key++} className={cls}>
+        {m[0]}
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  out.push(code.slice(last));
+  return out;
+}
+
 export default function App() {
   const [theme, setTheme] = useState<ToastTheme>("light");
   const [position, setPosition] = useState<ToastPosition>("bottom-right");
@@ -148,12 +461,37 @@ export default function App() {
   const [richColors, setRichColors] = useState(true);
   const [closeButton, setCloseButton] = useState(true);
   const [progressBar, setProgressBar] = useState(false);
+  // Visual variant applied to every toast via toastOptions
+  const [variant, setVariant] = useState<ToastVisualVariant>("default");
+  const [expand, setExpand] = useState(false);
   const [maxVisible, setMaxVisible] = useState<number>(Infinity);
-  const [paletteId, setPaletteId] = useState<string>("indigo");
+  // null = no palette selected (library default colors)
+  const [paletteId, setPaletteId] = useState<string | null>(null);
+  // Custom gradient picker (paletteId === "custom")
+  const [customFrom, setCustomFrom] = useState("#6366f1");
+  const [customTo, setCustomTo] = useState("#ec4899");
+  // Theme to restore when the palette is removed (picking a palette
+  // force-switches the theme to "gradient").
+  const prevThemeRef = useRef<ToastTheme>("light");
   const [activeCat, setActiveCat] = useState<DemoCategory>("basics");
+  const [activeDemoId, setActiveDemoId] = useState<string | null>(null);
 
-  const palette = (GRADIENT_PALETTES.find((p) => p.id === paletteId) ??
-    GRADIENT_PALETTES[0])!;
+  const customGrad = `linear-gradient(135deg, ${customFrom}, ${customTo})`;
+  const customPalette: GradientPalette = {
+    id: "custom",
+    label: "Custom",
+    preview: customGrad,
+    default: customGrad,
+    success: customGrad,
+    error: customGrad,
+    warning: customGrad,
+    info: customGrad,
+  };
+  const palette =
+    paletteId === "custom"
+      ? customPalette
+      : (GRADIENT_PALETTES.find((p) => p.id === paletteId) ??
+          GRADIENT_PALETTES[0])!;
   const gradientVars = {
     "--rtoast-grad-default": palette.default,
     "--rtoast-grad-success": palette.success,
@@ -162,9 +500,62 @@ export default function App() {
     "--rtoast-grad-info": palette.info,
     "--rtoast-grad-loading": palette.default,
   } as React.CSSProperties;
+
+  // Selecting a palette switches the theme to "gradient" so every toast
+  // shows the colors immediately; removing it restores the previous theme.
+  const applyPalette = (id: string, label: string, desc: string) => {
+    if (theme !== "gradient") prevThemeRef.current = theme;
+    setPaletteId(id);
+    setTheme("gradient");
+    toast.success(`${label} palette applied`, {
+      id: "palette-preview",
+      variant: "gradient",
+      description: desc,
+    });
+  };
+  const removePalette = () => {
+    setPaletteId(null);
+    if (theme === "gradient") setTheme(prevThemeRef.current);
+    toast("Palette removed", {
+      id: "palette-preview",
+      // The preview toast is reused via its fixed id, so explicitly reset
+      // the variant — otherwise the old "gradient" variant sticks around.
+      variant: "default",
+      description: "Back to the default look.",
+    });
+  };
   const [pageTheme, setPageTheme] = useState<"light" | "dark">("dark");
   const [copied, setCopied] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // What's New modal — the trigger pill shows a pulsing dot until the
+  // visitor has opened the latest release notes at least once.
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+  const [whatsNewSeen, setWhatsNewSeen] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.localStorage.getItem(WHATS_NEW_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+  const hasUnseenWhatsNew = whatsNewSeen !== LATEST_VERSION;
+  const openWhatsNew = () => {
+    setWhatsNewOpen(true);
+    if (hasUnseenWhatsNew) {
+      try {
+        window.localStorage.setItem(WHATS_NEW_STORAGE_KEY, LATEST_VERSION);
+      } catch {
+        /* localStorage blocked — the dot just stays */
+      }
+      setWhatsNewSeen(LATEST_VERSION);
+    }
+  };
+
+  // Live site stats for the bottom strip
+  const { hits, visitors } = useVisitorStats();
+  const hitsAnim = useCountUp(hits);
+  const visitorsAnim = useCountUp(visitors);
 
   useEffect(() => {
     document.documentElement.dataset.pageTheme = pageTheme;
@@ -181,25 +572,49 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const snippet = `import { Toaster, toast } from "react-toaster-message";
-import "react-toaster-message/styles.css";
-
-<Toaster
-  position="${position}"
-  theme="${theme}"
-  animation="${animation}"
-  richColors={${richColors}}
-  closeButton={${closeButton}}
-  maxVisibleToasts={${maxVisible === Infinity ? "Infinity" : maxVisible}}
-  toastOptions={{ progressBar: ${progressBar} }}
-  containerStyle={{
+  // Build the copy-paste snippet with ONLY the props that differ from the
+  // library defaults — a fresh user shouldn't copy noise like
+  // `expand={false}` or `maxVisibleToasts={Infinity}`.
+  const buildSnippet = (activeDemo: Demo | null) => {
+    const props: string[] = [];
+    if (position !== "bottom-right") props.push(`position="${position}"`);
+    if (theme !== "light") props.push(`theme="${theme}"`);
+    if (animation !== "slide") props.push(`animation="${animation}"`);
+    if (richColors) props.push("richColors");
+    if (closeButton) props.push("closeButton");
+    if (expand) props.push("expand");
+    if (maxVisible !== Infinity) props.push(`maxVisibleToasts={${maxVisible}}`);
+    const toastOpts: string[] = [];
+    if (variant !== "default") toastOpts.push(`variant: "${variant}"`);
+    if (progressBar) toastOpts.push("progressBar: true");
+    if (toastOpts.length > 0)
+      props.push(`toastOptions={{ ${toastOpts.join(", ")} }}`);
+    if (paletteId && paletteId !== "indigo") {
+      props.push(`containerStyle={{
     "--rtoast-grad-default": "${palette.default}",
     "--rtoast-grad-success": "${palette.success}",
     "--rtoast-grad-error":   "${palette.error}",
     "--rtoast-grad-warning": "${palette.warning}",
     "--rtoast-grad-info":    "${palette.info}",
-  }}
-/>`;
+  }}`);
+    }
+
+    const toaster =
+      props.length === 0
+        ? "<Toaster />"
+        : props.length === 1 && !props[0]!.includes("\n")
+          ? `<Toaster ${props[0]} />`
+          : `<Toaster\n  ${props.join("\n  ")}\n/>`;
+
+    return `import { Toaster, toast } from "react-toaster-message";
+import "react-toaster-message/styles.css";
+
+/* Fire toasts from anywhere${activeDemo ? ` — ${activeDemo.label}` : ""} */
+${activeDemo?.code ?? `toast.success("Hello from react-toaster-message!");`}
+
+/* Mount once at your app root */
+${toaster}`;
+  };
 
   const handleCopy = async () => {
     try {
@@ -223,6 +638,9 @@ import "react-toaster-message/styles.css";
         description: "A plain neutral toast.",
         icon: "💬",
         category: "basics",
+        code: `toast("Event has been created", {
+  description: "Sunday, December 03 at 9:00 AM",
+});`,
         run: () =>
           toast("Event has been created", {
             description: "Sunday, December 03 at 9:00 AM",
@@ -234,6 +652,7 @@ import "react-toaster-message/styles.css";
         description: "Confirm a positive outcome.",
         icon: "✅",
         category: "basics",
+        code: `toast.success("File uploaded successfully");`,
         run: () => toast.success("File uploaded successfully"),
       },
       {
@@ -242,6 +661,9 @@ import "react-toaster-message/styles.css";
         description: "Surface failure with retry context.",
         icon: "⛔",
         category: "basics",
+        code: `toast.error("Something went wrong", {
+  description: "Please try again later.",
+});`,
         run: () =>
           toast.error("Something went wrong", {
             description: "Please try again later.",
@@ -253,6 +675,9 @@ import "react-toaster-message/styles.css";
         description: "Caution the user, non-blocking.",
         icon: "⚠️",
         category: "basics",
+        code: `toast.warning("Heads up", {
+  description: "Storage is almost full.",
+});`,
         run: () =>
           toast.warning("Heads up", { description: "Storage is almost full." }),
       },
@@ -262,6 +687,7 @@ import "react-toaster-message/styles.css";
         description: "Non-urgent informational note.",
         icon: "ℹ️",
         category: "basics",
+        code: `toast.info("New version available");`,
         run: () => toast.info("New version available"),
       },
       {
@@ -270,6 +696,7 @@ import "react-toaster-message/styles.css";
         description: "Indeterminate async work in progress.",
         icon: "⏳",
         category: "basics",
+        code: `toast.loading("Saving changes…");`,
         run: () => toast.loading("Saving changes…"),
       },
 
@@ -280,6 +707,10 @@ import "react-toaster-message/styles.css";
         description: "Backdrop-blur, frosted look.",
         icon: "🧊",
         category: "variants",
+        code: `toast.success("Glass variant", {
+  variant: "glass",
+  description: "Backdrop-blur premium look.",
+});`,
         run: () =>
           toast.success("Glass variant", {
             variant: "glass",
@@ -292,7 +723,115 @@ import "react-toaster-message/styles.css";
         description: "Soft gradient surface.",
         icon: "🎨",
         category: "variants",
+        code: `toast.success("Gradient variant", { variant: "gradient" });`,
         run: () => toast.success("Gradient variant", { variant: "gradient" }),
+      },
+      {
+        id: "accent",
+        label: "Accent bars",
+        description: "Left color bar, clean surface.",
+        icon: "🖍️",
+        category: "variants",
+        code: `toast.success("Profile updated", { variant: "accent" });
+toast.info("Signed out", { variant: "accent" });
+toast.warning("Storage almost full", { variant: "accent" });
+toast.error("Payment failed", { variant: "accent" });`,
+        run: () => {
+          const fire = [
+            () => toast.success("Profile updated", { variant: "accent" }),
+            () => toast.info("Signed out", { variant: "accent" }),
+            () => toast.warning("Storage almost full", { variant: "accent" }),
+            () => toast.error("Payment failed", { variant: "accent" }),
+          ];
+          fire.forEach((fn, i) => setTimeout(fn, i * 220));
+        },
+      },
+      {
+        id: "solid",
+        label: "Solid",
+        description: "Bold filled surface per type.",
+        icon: "🟩",
+        category: "variants",
+        code: `toast.success("Payment received", { variant: "solid" });
+toast.error("Payment failed", { variant: "solid" });`,
+        run: () => {
+          toast.success("Payment received", { variant: "solid" });
+          setTimeout(
+            () => toast.error("Payment failed", { variant: "solid" }),
+            220,
+          );
+        },
+      },
+      {
+        id: "soft",
+        label: "Soft",
+        description: "Pastel tint, colored text.",
+        icon: "🌸",
+        category: "variants",
+        code: `toast.success("Draft saved", { variant: "soft" });
+toast.info("Syncing…", { variant: "soft" });`,
+        run: () => {
+          toast.success("Draft saved", { variant: "soft" });
+          setTimeout(() => toast.info("Syncing…", { variant: "soft" }), 220);
+        },
+      },
+      {
+        id: "outline",
+        label: "Outline",
+        description: "Colored border, clean card.",
+        icon: "⭕",
+        category: "variants",
+        code: `toast.warning("Session expiring", { variant: "outline" });
+toast.info("New comment", { variant: "outline" });`,
+        run: () => {
+          toast.warning("Session expiring", { variant: "outline" });
+          setTimeout(
+            () => toast.info("New comment", { variant: "outline" }),
+            220,
+          );
+        },
+      },
+      {
+        id: "neon",
+        label: "Neon",
+        description: "Dark card, glowing edge.",
+        icon: "💡",
+        category: "variants",
+        code: `toast.success("Deploy complete", { variant: "neon" });
+toast.error("Build failed", { variant: "neon" });`,
+        run: () => {
+          toast.success("Deploy complete", { variant: "neon" });
+          setTimeout(
+            () => toast.error("Build failed", { variant: "neon" }),
+            220,
+          );
+        },
+      },
+      {
+        id: "border-bars",
+        label: "Border bars",
+        description: "left / right / x / top / bottom / y",
+        icon: "📐",
+        category: "variants",
+        code: `toast.success("Profile updated", { variant: "left-border" });
+toast.info("New message", { variant: "right-border" });
+toast.warning("Low storage", { variant: "x-border" });
+toast.success("Draft saved", { variant: "top-border" });
+toast.error("Upload failed", { variant: "bottom-border" });
+toast.info("Syncing…", { variant: "y-border" });`,
+        run: () => {
+          const fire = [
+            () =>
+              toast.success("left-border", { variant: "left-border" }),
+            () => toast.info("right-border", { variant: "right-border" }),
+            () => toast.warning("x-border", { variant: "x-border" }),
+            () => toast.success("top-border", { variant: "top-border" }),
+            () =>
+              toast.error("bottom-border", { variant: "bottom-border" }),
+            () => toast.info("y-border", { variant: "y-border" }),
+          ];
+          fire.forEach((fn, i) => setTimeout(fn, i * 200));
+        },
       },
       {
         id: "rich",
@@ -300,6 +839,10 @@ import "react-toaster-message/styles.css";
         description: "Bold semantic tinting.",
         icon: "🌈",
         category: "variants",
+        code: `toast.error("Rich color error", {
+  richColors: true,
+  description: "High-contrast semantic styling.",
+});`,
         run: () =>
           toast.error("Rich color error", {
             richColors: true,
@@ -312,6 +855,10 @@ import "react-toaster-message/styles.css";
         description: "Bring your own visual.",
         icon: "✨",
         category: "variants",
+        code: `toast("Custom icon", {
+  icon: "🚀",
+  description: "Drop in any ReactNode as the icon.",
+});`,
         run: () =>
           toast("Custom icon", {
             icon: "🚀",
@@ -326,6 +873,12 @@ import "react-toaster-message/styles.css";
         description: "Single primary action.",
         icon: "↩️",
         category: "interactive",
+        code: `toast("Item moved to trash", {
+  action: {
+    label: "Undo",
+    onClick: () => toast.success("Restored"),
+  },
+});`,
         run: () =>
           toast("Item moved to trash", {
             action: {
@@ -340,6 +893,14 @@ import "react-toaster-message/styles.css";
         description: "Primary + cancel, sticky duration.",
         icon: "❓",
         category: "interactive",
+        code: `toast("Delete project?", {
+  duration: Infinity,
+  action: {
+    label: "Delete",
+    onClick: () => toast.success("Deleted"),
+  },
+  cancel: { label: "Cancel", onClick: () => {} },
+});`,
         run: () =>
           toast("Delete project?", {
             duration: Infinity,
@@ -356,6 +917,11 @@ import "react-toaster-message/styles.css";
         description: "Loading → resolve / reject.",
         icon: "🌀",
         category: "interactive",
+        code: `toast.promise(uploadFile(), {
+  loading: "Uploading…",
+  success: (data) => \`Uploaded \${data.name}\`,
+  error: "Upload failed",
+});`,
         run: () =>
           toast.promise(
             new Promise<{ name: string }>((res) =>
@@ -374,6 +940,13 @@ import "react-toaster-message/styles.css";
         description: "Mutate an existing toast in place.",
         icon: "♻️",
         category: "interactive",
+        code: `const id = toast.loading("Processing…");
+// …later, when the work finishes:
+toast.update(id, {
+  type: "success",
+  title: "Done!",
+  duration: 3000,
+});`,
         run: () => {
           const id = toast.loading("Processing…");
           setTimeout(
@@ -395,11 +968,19 @@ import "react-toaster-message/styles.css";
         description: `animation="${name}"`,
         icon: "🎬",
         category: "animations",
-        run: () =>
+        code: `toast("AOS: ${name}", {
+  animation: "${name}",
+  description: 'Triggered with animation="${name}"',
+});`,
+        run: () => {
+          // Sync the Toaster-level animation control too, so the live
+          // snippet's <Toaster animation="…"> reflects the selection.
+          setAnimation(name);
           toast(`AOS: ${name}`, {
             animation: name,
             description: `Triggered with animation="${name}"`,
-          }),
+          });
+        },
       })),
 
       // Advanced
@@ -409,6 +990,11 @@ import "react-toaster-message/styles.css";
         description: "Visual countdown to auto-close.",
         icon: "📊",
         category: "advanced",
+        code: `toast("With progress", {
+  progressBar: true,
+  duration: 5000,
+  closeButton: true,
+});`,
         run: () =>
           toast("With progress", {
             progressBar: true,
@@ -422,6 +1008,11 @@ import "react-toaster-message/styles.css";
         description: "Queue 6 errors rapidly.",
         icon: "💥",
         category: "advanced",
+        code: `for (let i = 1; i <= 6; i++) {
+  toast.error("Something went wrong", {
+    description: \`Attempt #\${i} failed.\`,
+  });
+}`,
         run: () => {
           for (let i = 1; i <= 6; i++) {
             setTimeout(
@@ -440,6 +1031,12 @@ import "react-toaster-message/styles.css";
         description: "Multi-line body wrapping.",
         icon: "📝",
         category: "advanced",
+        code: `toast.info("Read the changelog", {
+  description:
+    "We just shipped v1.0.0 — improved swipe gestures, " +
+    "redesigned themes, and smoother stacking.",
+  duration: 8000,
+});`,
         run: () =>
           toast.info("Read the changelog", {
             description:
@@ -453,6 +1050,11 @@ import "react-toaster-message/styles.css";
         description: "Stays until dismissed.",
         icon: "📌",
         category: "advanced",
+        code: `toast("Sticky toast", {
+  duration: Infinity,
+  closeButton: true,
+  description: "This will not auto-close.",
+});`,
         run: () =>
           toast("Sticky toast", {
             duration: Infinity,
@@ -466,6 +1068,7 @@ import "react-toaster-message/styles.css";
         description: "Clear the entire stack.",
         icon: "🧹",
         category: "advanced",
+        code: `toast.dismiss(); // no id = clear every toast`,
         run: () => toast.dismiss(),
       },
     ],
@@ -473,6 +1076,11 @@ import "react-toaster-message/styles.css";
   );
 
   const filtered = demos.filter((d) => d.category === activeCat);
+
+  // Live snippet: reflects the current Toaster controls AND the last demo
+  // card the user clicked, ready to copy-paste.
+  const activeDemo = demos.find((d) => d.id === activeDemoId) ?? null;
+  const snippet = buildSnippet(activeDemo);
 
   return (
     <div className="page">
@@ -508,6 +1116,30 @@ import "react-toaster-message/styles.css";
             >
               GitHub
             </a>
+            <button
+              className={`ghost-btn whatsnew-btn ${hasUnseenWhatsNew ? "has-unseen" : ""}`}
+              onClick={openWhatsNew}
+              aria-label="What's new"
+              title="What's new"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M12 2l2.39 5.16L20 8.27l-4 3.9.94 5.52L12 15l-4.94 2.69L8 12.17l-4-3.9 5.61-1.11L12 2z" />
+              </svg>
+              <span className="whatsnew-label">What's new</span>
+              {hasUnseenWhatsNew && (
+                <span className="whatsnew-dot" aria-hidden="true" />
+              )}
+            </button>
             <button
               className="ghost-btn icon-only"
               onClick={() =>
@@ -551,6 +1183,30 @@ import "react-toaster-message/styles.css";
                 GitHub
               </a>
               <button
+                className={`ghost-btn whatsnew-btn ${hasUnseenWhatsNew ? "has-unseen" : ""}`}
+                onClick={openWhatsNew}
+                aria-label="What's new"
+                title="What's new"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M12 2l2.39 5.16L20 8.27l-4 3.9.94 5.52L12 15l-4.94 2.69L8 12.17l-4-3.9 5.61-1.11L12 2z" />
+                </svg>
+                <span className="whatsnew-label">What's new</span>
+                {hasUnseenWhatsNew && (
+                  <span className="whatsnew-dot" aria-hidden="true" />
+                )}
+              </button>
+              <button
                 className="ghost-btn icon-only"
                 onClick={() =>
                   setPageTheme(pageTheme === "dark" ? "light" : "dark")
@@ -564,7 +1220,7 @@ import "react-toaster-message/styles.css";
           </div>
 
           <div className="hero-content">
-            <span className="pill">V1.1.1 · Framer Motion · SSR-safe</span>
+            <span className="pill">V1.2.0 · Framer Motion · SSR-safe</span>
             <h1 className="title">
               Premium toasts
               <br />
@@ -631,9 +1287,17 @@ import "react-toaster-message/styles.css";
                     "system",
                     "glass",
                     "gradient",
+                    "accent",
                   ] as ToastTheme[]
                 }
-                onChange={(v) => setTheme(v)}
+                onChange={(v) => {
+                  setTheme(v);
+                  // Instant live preview of the chosen theme
+                  toast.success(`${v} theme`, {
+                    id: "theme-preview",
+                    description: "Every toast now uses this theme.",
+                  });
+                }}
               />
             </Control>
 
@@ -642,6 +1306,26 @@ import "react-toaster-message/styles.css";
                 value={animation}
                 options={ANIMATIONS}
                 onChange={(v) => setAnimation(v)}
+              />
+            </Control>
+
+            <Control label="Variant">
+              <Segmented
+                value={variant}
+                options={VARIANTS}
+                onChange={(v) => {
+                  setVariant(v);
+                  // Instant live preview of the chosen design (fixed id =
+                  // re-picking just updates the same toast).
+                  toast.success(
+                    v === "default" ? "Default variant" : `${v} variant`,
+                    {
+                      id: "variant-preview",
+                      variant: v,
+                      description: "Every toast will now use this design.",
+                    },
+                  );
+                }}
               />
             </Control>
 
@@ -678,8 +1362,20 @@ import "react-toaster-message/styles.css";
                     role="radio"
                     aria-checked={paletteId === p.id}
                     className={`palette-chip ${paletteId === p.id ? "is-active" : ""}`}
-                    onClick={() => setPaletteId(p.id)}
-                    title={p.label}
+                    onClick={() =>
+                      paletteId === p.id
+                        ? removePalette()
+                        : applyPalette(
+                            p.id,
+                            p.label,
+                            "Every toast now uses these colors. Click the chip again to remove.",
+                          )
+                    }
+                    title={
+                      paletteId === p.id
+                        ? `${p.label} — click again to remove`
+                        : p.label
+                    }
                   >
                     <span
                       className="palette-swatch"
@@ -688,6 +1384,81 @@ import "react-toaster-message/styles.css";
                     <span className="palette-label">{p.label}</span>
                   </button>
                 ))}
+
+                {/* Custom gradient — pick both stops with native color
+                    pickers; changes apply live to every toast. */}
+                <div
+                  role="radio"
+                  aria-checked={paletteId === "custom"}
+                  tabIndex={0}
+                  className={`palette-chip palette-chip--custom ${
+                    paletteId === "custom" ? "is-active" : ""
+                  }`}
+                  onClick={() =>
+                    paletteId === "custom"
+                      ? removePalette()
+                      : applyPalette(
+                          "custom",
+                          "Custom",
+                          `${customFrom} → ${customTo}`,
+                        )
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      paletteId === "custom"
+                        ? removePalette()
+                        : applyPalette(
+                            "custom",
+                            "Custom",
+                            `${customFrom} → ${customTo}`,
+                          );
+                    }
+                  }}
+                  title={
+                    paletteId === "custom"
+                      ? "Custom — click again to remove"
+                      : "Pick your own gradient"
+                  }
+                >
+                  <span
+                    className="palette-swatch"
+                    style={{ background: customGrad }}
+                  />
+                  <span className="palette-label">Custom</span>
+                  <input
+                    type="color"
+                    className="palette-color-input"
+                    value={customFrom}
+                    aria-label="Gradient start color"
+                    title="Gradient start color"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      setCustomFrom(e.target.value);
+                      applyPalette(
+                        "custom",
+                        "Custom",
+                        `${e.target.value} → ${customTo}`,
+                      );
+                    }}
+                  />
+                  <input
+                    type="color"
+                    className="palette-color-input"
+                    value={customTo}
+                    aria-label="Gradient end color"
+                    title="Gradient end color"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      setCustomTo(e.target.value);
+                      applyPalette(
+                        "custom",
+                        "Custom",
+                        `${customFrom} → ${e.target.value}`,
+                      );
+                    }}
+                  />
+                </div>
               </div>
             </Control>
 
@@ -711,7 +1482,7 @@ import "react-toaster-message/styles.css";
               </div>
             </Control>
 
-            <Control label="Options">
+            <Control label="Options" className="control--options">
               <div className="toggle-row">
                 <Toggle
                   checked={richColors}
@@ -728,6 +1499,7 @@ import "react-toaster-message/styles.css";
                   onChange={setProgressBar}
                   label="Progress bar"
                 />
+                <Toggle checked={expand} onChange={setExpand} label="Expand" />
               </div>
             </Control>
           </div>
@@ -752,7 +1524,14 @@ import "react-toaster-message/styles.css";
 
         <section className="demos">
           {filtered.map((d) => (
-            <button key={d.id} className="demo-card" onClick={d.run}>
+            <button
+              key={d.id}
+              className={`demo-card ${activeDemoId === d.id ? "is-selected" : ""}`.trim()}
+              onClick={() => {
+                d.run();
+                setActiveDemoId(d.id);
+              }}
+            >
               <div className="demo-icon" aria-hidden>
                 {d.icon}
               </div>
@@ -769,7 +1548,12 @@ import "react-toaster-message/styles.css";
 
         <section className="snippet-card">
           <div className="snippet-head">
-            <h3>Current setup</h3>
+            <h3>
+              Current setup
+              {activeDemo && (
+                <span className="snippet-demo-tag">· {activeDemo.label}</span>
+              )}
+            </h3>
             <button
               className={`copy-btn ${copied ? "is-copied" : ""}`}
               onClick={handleCopy}
@@ -786,7 +1570,17 @@ import "react-toaster-message/styles.css";
               )}
             </button>
           </div>
-          <pre className="snippet">{snippet}</pre>
+          <div className="code-window">
+            <div className="code-window-bar">
+              <span className="cw-dot cw-red" />
+              <span className="cw-dot cw-yellow" />
+              <span className="cw-dot cw-green" />
+              <span className="cw-file">App.tsx</span>
+            </div>
+            <pre className="snippet">
+              <code>{highlightCode(snippet)}</code>
+            </pre>
+          </div>
         </section>
 
         <footer className="footer-card">
@@ -920,6 +1714,84 @@ import "react-toaster-message/styles.css";
         </footer>
       </main>
 
+      {/* ── Site stats strip — full-width bar pinned to the page bottom ── */}
+      <div className="stats-strip">
+        <div className="stats-strip-inner">
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="17" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </span>
+            <span className="stat-body">
+              <span className="stat-label">Last Updated</span>
+              <span className="stat-value">{SITE_LAST_UPDATED}</span>
+            </span>
+          </div>
+
+          <div className="stat-card">
+            <span className="stat-icon" aria-hidden>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </span>
+            <span className="stat-body">
+              <span className="stat-label">Total Hits</span>
+              <span className="stat-value stat-num">
+                {formatStat(hitsAnim)}
+              </span>
+            </span>
+          </div>
+
+          <div className="stat-card stat-card--highlight">
+            <span className="stat-icon" aria-hidden>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            </span>
+            <span className="stat-body">
+              <span className="stat-label">
+                Total Visitors
+                <span className="stat-live" aria-label="live">
+                  <span className="stat-live-dot" />
+                  LIVE
+                </span>
+              </span>
+              <span className="stat-value stat-num">
+                {formatStat(visitorsAnim)}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {whatsNewOpen && <WhatsNewModal onClose={() => setWhatsNewOpen(false)} />}
+
       <button
         className={`scroll-top-btn ${scrolled ? "is-visible" : ""}`}
         onClick={scrollToTop}
@@ -947,10 +1819,11 @@ import "react-toaster-message/styles.css";
         theme={theme}
         richColors={richColors}
         closeButton={closeButton}
+        expand={expand}
         expandOnHover
         animation={animation}
         maxVisibleToasts={maxVisible}
-        toastOptions={{ progressBar }}
+        toastOptions={{ progressBar, variant }}
         containerStyle={gradientVars}
       />
     </div>
@@ -960,12 +1833,14 @@ import "react-toaster-message/styles.css";
 function Control({
   label,
   children,
+  className,
 }: {
   label: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="control">
+    <div className={`control ${className ?? ""}`.trim()}>
       <div className="control-label">{label}</div>
       <div className="control-body">{children}</div>
     </div>
@@ -1127,8 +2002,7 @@ function useTheme() {
   const [resolvedMode, setResolvedMode] = useState<"light" | "dark">(() => {
     if (typeof document === "undefined") return "dark";
     return (
-      (document.documentElement.dataset.pageTheme as "light" | "dark") ||
-      "dark"
+      (document.documentElement.dataset.pageTheme as "light" | "dark") || "dark"
     );
   });
 
@@ -1422,8 +2296,7 @@ function SocialUnavailableModal({
           color: "inherit",
           borderRadius: 16,
           padding: "32px 24px 24px",
-          border:
-            "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+          border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
           boxShadow: "0 24px 60px rgba(0, 0, 0, 0.4)",
           textAlign: "center",
           overflow: "hidden",
@@ -1548,6 +2421,129 @@ function SocialUnavailableModal({
   );
 }
 
+/* ───────────────────────────────────────────────────────────────────────────
+   <WhatsNewModal />
+
+   Changelog dialog listing every release, newest first — mirrors the
+   design language of the demo page (glass surfaces, gradient accents).
+   Portaled to <body> for the same containing-block reason as the social
+   modal above.
+   ─────────────────────────────────────────────────────────────────────────── */
+function WhatsNewModal({ onClose }: { onClose: () => void }) {
+  // ESC closes; body scroll locks while open
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="wn-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wn-title"
+      onClick={onClose}
+    >
+      <div className="wn-modal" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="wn-close"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+
+        <div className="wn-head">
+          <span className="wn-chip">
+            <span className="wn-chip-dot" />
+            Changelog
+          </span>
+          <h3 id="wn-title" className="wn-title">
+            What's new in react-toaster-message
+          </h3>
+          <p className="wn-desc">
+            Release notes for every version. Latest changes at the top.
+          </p>
+        </div>
+
+        <div className="wn-body">
+          {CHANGELOG.map((entry) => (
+            <article
+              key={entry.version}
+              className="wn-version"
+              aria-labelledby={`wn-v-${entry.version}`}
+            >
+              <header className="wn-vhead">
+                <div className="wn-vmeta">
+                  <h4 id={`wn-v-${entry.version}`} className="wn-vtitle">
+                    v{entry.version}
+                  </h4>
+                  {entry.isLatest && <span className="wn-badge">Latest</span>}
+                </div>
+                <time className="wn-vdate">{entry.date}</time>
+              </header>
+
+              {entry.highlight && (
+                <p className="wn-highlight">{renderRich(entry.highlight)}</p>
+              )}
+
+              {entry.sections.map((section) => (
+                <section
+                  key={section.kind}
+                  className="wn-section"
+                  data-kind={section.kind}
+                >
+                  <span className={`wn-section-tag wn-tag-${section.kind}`}>
+                    {section.title}
+                  </span>
+                  <ul className="wn-list">
+                    {section.items.map((item, i) => (
+                      <li key={i} className="wn-item">
+                        {renderRich(item)}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </article>
+          ))}
+        </div>
+
+        <div className="wn-footer">
+          <button type="button" className="primary-btn" onClick={onClose}>
+            Got it
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 const styles = `
 :root {
   color-scheme: light dark;
@@ -1568,6 +2564,14 @@ html[data-page-theme="dark"] {
   --accent-3: #f472b6;
   --primary-bg: linear-gradient(135deg, #8b5cf6, #6366f1);
   --primary-text: #fff;
+  --code-comment: #6b7280;
+  --code-string: #7ee787;
+  --code-kw: #c084fc;
+  --code-fn: #79b8ff;
+  --code-num: #fbbf24;
+  --scroll-track: rgba(255, 255, 255, 0.04);
+  --scroll-thumb: rgba(167, 139, 250, 0.35);
+  --scroll-thumb-hover: rgba(167, 139, 250, 0.55);
 }
 html[data-page-theme="light"] {
   --bg-0: #fafafb;
@@ -1585,6 +2589,14 @@ html[data-page-theme="light"] {
   --accent-3: #db2777;
   --primary-bg: linear-gradient(135deg, #7c3aed, #4f46e5);
   --primary-text: #fff;
+  --code-comment: #8b8b96;
+  --code-string: #0f766e;
+  --code-kw: #7c3aed;
+  --code-fn: #1d4ed8;
+  --code-num: #b45309;
+  --scroll-track: rgba(15, 15, 25, 0.05);
+  --scroll-thumb: rgba(124, 58, 237, 0.30);
+  --scroll-thumb-hover: rgba(124, 58, 237, 0.50);
 }
 
 * { box-sizing: border-box; }
@@ -1613,6 +2625,52 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEMED SCROLLBARS — global (page + every scrollable panel)
+   ═══════════════════════════════════════════════════════════ */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
+}
+/* WebKit (Chrome / Edge / Safari) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scroll-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scroll-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scroll-thumb-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Declaring any ::-webkit-scrollbar rule resurrects the platform
+   stepper arrows — remove them explicitly. */
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Tighter scrollbar inside compact scroll areas (modal body, code) */
+.wn-body::-webkit-scrollbar,
+.snippet::-webkit-scrollbar,
+.tabs-bar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
 .page {
@@ -1932,7 +2990,7 @@ body {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 24px 80px;
+  padding: 0 0 80px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 28px;
@@ -2093,10 +3151,61 @@ body {
 }
 .palette-label { line-height: 1; }
 
+/* Custom gradient chip — two native color pickers, live preview */
+.palette-chip--custom { user-select: none; }
+.palette-color-input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+.palette-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.palette-color-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+.palette-color-input::-moz-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+.palette-color-input:hover { transform: scale(1.1); }
+
 .toggle-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Options control — 7 controls in a 3-col grid leave the last row with
+   two empty cells, so this one spans the full row and lays its toggles
+   out as chip cards that share the width evenly. */
+.control--options { grid-column: 1 / -1; }
+.control--options .toggle-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.control--options .toggle {
+  flex: 1 1 160px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  transition: background .15s ease, border-color .15s ease;
+}
+.control--options .toggle:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+.control--options .toggle.is-on {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-1));
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
 }
 .toggle {
   display: inline-flex;
@@ -2206,6 +3315,17 @@ body {
   box-shadow: 0 12px 28px -18px rgba(0,0,0,0.45);
 }
 .demo-card:active { transform: translateY(0); }
+.demo-card.is-selected {
+  border-color: var(--accent);
+  background: var(--surface-strong);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.snippet-demo-tag {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent);
+}
 .demo-icon {
   width: 38px; height: 38px;
   border-radius: 10px;
@@ -2286,15 +3406,42 @@ body {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: transparent;
 }
+.code-window {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-1);
+  overflow: hidden;
+  box-shadow: 0 14px 40px -24px rgba(0, 0, 0, 0.5);
+}
+.code-window-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.cw-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cw-red { background: #ff5f57; }
+.cw-yellow { background: #febc2e; }
+.cw-green { background: #28c840; }
+.cw-file {
+  margin-left: 10px;
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-size: 12px;
+  color: var(--text-mute);
+}
 .snippet {
   margin: 0;
   padding: 18px 20px;
-  border-radius: 12px;
-  background: var(--bg-1);
-  border: 1px solid var(--border);
   font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.7;
   color: var(--text);
   max-width: 100%;
   min-width: 0;
@@ -2302,6 +3449,11 @@ body {
   white-space: pre;
   -webkit-overflow-scrolling: touch;
 }
+.snippet .tok-comment { color: var(--code-comment); font-style: italic; }
+.snippet .tok-string { color: var(--code-string); }
+.snippet .tok-kw { color: var(--code-kw); }
+.snippet .tok-fn { color: var(--code-fn); font-weight: 600; }
+.snippet .tok-num { color: var(--code-num); }
 
 /* FOOTER CARD */
 .footer-card {
@@ -2675,5 +3827,514 @@ body {
   .brand-text, .sticky-nav .brand-text { display: none; }
   .ghost-btn { padding: 5px 8px; font-size: 11px; }
   .ghost-btn.icon-only { padding: 5px 7px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WHAT'S NEW trigger pill (navs)
+   ═══════════════════════════════════════════════════════════ */
+.whatsnew-btn { position: relative; }
+.whatsnew-btn svg { flex-shrink: 0; }
+.whatsnew-btn.has-unseen {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 12%, transparent),
+    color-mix(in srgb, var(--accent-2) 9%, transparent)
+  );
+  color: var(--accent);
+}
+.whatsnew-btn.has-unseen:hover {
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.whatsnew-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--accent-3);
+  box-shadow:
+    0 0 0 2px var(--bg-0),
+    0 0 0 0 rgba(219, 39, 119, 0.55);
+  animation: livePulse 1.8s ease-out infinite;
+}
+
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+.whatsnew-dot {
+  animation-name: whatsnewPulse;
+}
+@keyframes whatsnewPulse {
+  0% {
+    box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 0 rgba(219, 39, 119, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 8px rgba(219, 39, 119, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--bg-0), 0 0 0 0 rgba(219, 39, 119, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .whatsnew-dot, .stat-live-dot, .wn-chip-dot { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SITE STATS STRIP (photo design) — page-bottom bar
+   ═══════════════════════════════════════════════════════════ */
+.stats-strip {
+  position: relative;
+  padding: 22px 24px;
+  border-top: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--bg-1) 55%, transparent);
+}
+.stats-strip::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 auto 0;
+  height: 2px;
+  background: linear-gradient(120deg, var(--accent-3), var(--accent), var(--accent-2));
+  opacity: 0.55;
+  pointer-events: none;
+}
+.stats-strip-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  overflow: hidden;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease,
+    background 0.22s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-strong);
+  box-shadow:
+    0 8px 22px -14px rgba(124, 58, 237, 0.45),
+    0 2px 6px -2px rgba(15, 23, 42, 0.08);
+}
+
+.stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    color-mix(in srgb, var(--accent-2) 11%, transparent)
+  );
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+.stat-icon svg { width: 18px; height: 18px; }
+.stat-card:hover .stat-icon { transform: scale(1.06) rotate(-3deg); }
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stat-num {
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  letter-spacing: 0;
+}
+
+.stat-card--highlight {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 12%, transparent),
+    color-mix(in srgb, var(--accent-2) 7%, transparent) 60%,
+    color-mix(in srgb, var(--accent-3) 10%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.stat-card--highlight .stat-icon {
+  background: var(--primary-bg);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px -8px rgba(124, 58, 237, 0.55);
+}
+.stat-card--highlight .stat-value {
+  background: linear-gradient(120deg, var(--accent-3), var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.stat-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+html[data-page-theme="dark"] .stat-live {
+  background: rgba(16, 185, 129, 0.16);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.32);
+}
+.stat-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  animation: livePulse 1.6s ease-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   WHAT'S NEW modal (changelog)
+   ═══════════════════════════════════════════════════════════ */
+.wn-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: wnFadeIn 0.22s ease-out;
+}
+@keyframes wnFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.wn-modal {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  padding: 28px 0 0;
+  border-radius: 22px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.1),
+    0 30px 70px -20px rgba(0, 0, 0, 0.45),
+    0 50px 120px -30px rgba(124, 58, 237, 0.4);
+  overflow: hidden;
+  animation: wnPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes wnPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.wn-modal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--accent-3));
+  z-index: 2;
+}
+
+.wn-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.wn-close:hover {
+  background: var(--surface-strong);
+  color: var(--text);
+  transform: rotate(90deg);
+}
+
+.wn-head {
+  padding: 0 28px 18px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.wn-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 14%, transparent),
+    color-mix(in srgb, var(--accent-3) 11%, transparent)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.wn-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent-3);
+  box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.6);
+  animation: livePulse 1.6s ease-out infinite;
+}
+.wn-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+.wn-desc {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.wn-body {
+  padding: 22px 28px 8px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  text-align: left;
+}
+
+.wn-version { position: relative; }
+.wn-version + .wn-version {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--border);
+}
+
+.wn-vhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.wn-vmeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.wn-vtitle {
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.wn-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--primary-bg);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 14px -6px rgba(124, 58, 237, 0.6);
+}
+.wn-vdate {
+  font-size: 12.5px;
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
+}
+.wn-highlight {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 9%, transparent),
+    color-mix(in srgb, var(--accent-2) 7%, transparent)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.wn-section + .wn-section { margin-top: 16px; }
+.wn-section-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.wn-tag-added {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #15803d;
+}
+.wn-tag-changed {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.30);
+  color: #b45309;
+}
+.wn-tag-fixed {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.28);
+  color: #1d4ed8;
+}
+.wn-tag-technical {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.28);
+  color: #6d28d9;
+}
+.wn-tag-docs {
+  background: rgba(236, 72, 153, 0.12);
+  border-color: rgba(236, 72, 153, 0.28);
+  color: #be185d;
+}
+html[data-page-theme="dark"] .wn-tag-added { color: #4ade80; }
+html[data-page-theme="dark"] .wn-tag-changed { color: #fbbf24; }
+html[data-page-theme="dark"] .wn-tag-fixed { color: #60a5fa; }
+html[data-page-theme="dark"] .wn-tag-technical { color: #c4b5fd; }
+html[data-page-theme="dark"] .wn-tag-docs { color: #f9a8d4; }
+
+.wn-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.wn-item {
+  position: relative;
+  padding-left: 18px;
+  font-size: 13.25px;
+  line-height: 1.55;
+  color: var(--text-soft);
+}
+.wn-item::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.7;
+}
+.wn-item strong { color: var(--text); font-weight: 600; }
+.wn-code {
+  font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.wn-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* Stats + What's New — responsive */
+@media (max-width: 768px) {
+  .stats-strip { padding: 18px 20px; }
+  .stats-strip-inner { grid-template-columns: 1fr; gap: 10px; }
+}
+@media (max-width: 640px) {
+  .whatsnew-label { display: none; }
+  .whatsnew-btn { padding: 8px 10px; }
+  .wn-modal {
+    max-height: calc(100vh - 24px);
+    border-radius: 18px;
+  }
+  .wn-head, .wn-body, .wn-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .wn-footer { flex-direction: column-reverse; align-items: stretch; }
+  .wn-footer .primary-btn { width: 100%; }
+  .wn-vhead { gap: 8px; }
 }
 `;

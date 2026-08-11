@@ -4,7 +4,7 @@
 
 **A premium, Sonner-inspired React toast notification library.**
 
-Framer-Motion animations · swipe-to-dismiss · promise toasts · FIFO stagger · 5 themes · rich colors · a11y · SSR-safe · TypeScript-first.
+Framer-Motion animations · swipe-to-dismiss · promise toasts · FIFO stagger · 6 themes · 14 visual variants · rich colors · a11y · SSR-safe · TypeScript-first.
 
 [![npm](https://img.shields.io/npm/v/react-toaster-message.svg?color=4f46e5&style=flat-square)](https://www.npmjs.com/package/react-toaster-message)
 [![types](https://img.shields.io/badge/types-included-3178c6?style=flat-square)](#api)
@@ -20,15 +20,33 @@ A modern, premium React toast notification library — Sonner-inspired, built wi
 - 🎬 Smooth Framer-Motion-powered animations (slide, blur-fade, spring, scale, bounce)
 - 🧱 Stack reposition with `layout` animations
 - 👆 Swipe-to-dismiss (touch + mouse) with velocity detection
-- 🌗 Light / dark / system / glass / gradient themes via CSS variables
+- 🌗 Light / dark / system / glass / gradient / accent themes via CSS variables
+- 🎨 14 visual variants — glass, gradient, accent, solid, soft, outline, neon, and 6 border-bar styles (`left/right/x/top/bottom/y-border`)
 - 🌈 Rich colors mode
 - ⏸ Pause on hover, pause on window blur
-- 📦 Queue + `maxVisibleToasts`
+- 📦 Sonner-style collapsed stack (expand on hover) + `maxVisibleToasts`
 - ⏳ Promise toasts with loading → success / error transitions
 - 🎯 Action / cancel / undo / confirmation toasts
 - ♻️ `toast.update(id, …)` to mutate live toasts
 - ♿ ARIA `role`, `aria-live`, reduced-motion aware, hotkey-focusable
 - 🪶 Lightweight, tree-shakeable ESM + CJS builds, SSR-safe
+
+## What's new in v1.2.0
+
+**Added**
+
+- Sonner-style collapsed stack: by default older toasts now tuck behind the newest one and the whole stack expands on hover (`expand` / `expandOnHover` props).
+- 11 new visual variants: `accent`, `solid`, `soft`, `outline`, `neon`, plus 6 border-bar styles — `left-border`, `right-border`, `x-border`, `top-border`, `bottom-border`, `y-border`.
+- New `theme="accent"` — puts a rounded color bar on every toast in the portal.
+
+**Changed**
+
+- `maxVisibleToasts` is now sonner-style: the **newest** toasts always show and the oldest slide out (previously new toasts waited in a hidden queue). Hidden toasts keep expiring in the background.
+- An explicit per-toast `variant` (`glass`, `gradient`, …) now wins over the global `richColors` flag instead of being painted over by it.
+
+**Breaking (internal API only)**
+
+- The internal `queue` array and `promote()` method were removed from `useToastStore`. The `toast` API and all `<Toaster />` props are unchanged — this only affects code that read the store's queue directly.
 
 ## Install
 
@@ -86,7 +104,8 @@ import { Toaster } from "react-toaster-message";
   dir="auto"                     // ltr | rtl | auto — drives swipe direction
 
   /* ─── Look & feel ───────────────────────────────────────────── */
-  theme="light"                  // light | dark | system | glass | gradient
+  theme="light"                  // light | dark | system | glass | gradient |
+                                 //   accent (left color bar on every toast)
   richColors                     // bold semantic tint per type (success/error/…)
   closeButton                    // show ✕ on every toast
   animation="slide"              // slide | blur-fade | scale | spring | bounce
@@ -95,13 +114,16 @@ import { Toaster } from "react-toaster-message";
 
   /* ─── Stack behaviour ───────────────────────────────────────── */
   maxVisibleToasts={Infinity}    // how many are on screen at once.
-                                 //   Extra toasts queue up and promote when
-                                 //   one is dismissed. Default: Infinity.
-  expand={false}                 // true = always show every toast at full size
-                                 //   (no peek-behind stack)
-  expandOnHover                  // when collapsed, the toast under the cursor
-                                 //   scales back to full size (others stay
-                                 //   peeked). Per-toast, not whole stack.
+                                 //   The NEWEST toasts always show — older
+                                 //   ones slide out and keep expiring in the
+                                 //   background (sonner-style). Default: Infinity.
+  expand={false}                 // false (default) = collapsed stack: older
+                                 //   toasts peek out behind the newest one.
+                                 //   true = always show every toast at full
+                                 //   size in a list.
+  expandOnHover                  // when collapsed, hovering the stack expands
+                                 //   the whole stack into the full list;
+                                 //   collapses again on mouse leave.
 
   /* ─── Timing ────────────────────────────────────────────────── */
   duration={4000}                // default auto-close time in ms.
@@ -152,7 +174,17 @@ toast("Item moved to trash", {
   description: "You can undo within 5s.",
   duration: 5000,                           // override the global default
   position: "top-center",                   // per-toast position override
-  variant: "glass",                         // default | glass | gradient
+  variant: "glass",                         // default | glass | gradient | accent |
+                                            //   solid | soft | outline | neon |
+                                            //   left-border | right-border | x-border |
+                                            //   top-border | bottom-border | y-border
+                                            //   accent  = rounded color bar on the left
+                                            //   solid   = bold filled surface per type
+                                            //   soft    = pastel tint + colored text
+                                            //   outline = colored border, clean card
+                                            //   neon    = dark card with glowing edge
+                                            //   *-border = rounded color bar on that
+                                            //   edge (x = both sides, y = top+bottom)
   richColors: true,                         // semantic tint just for this toast
   progressBar: true,                        // visual countdown bar
   closeButton: true,                        // show ✕
@@ -239,15 +271,15 @@ Full annotated reference is in [Quick start](#quick-start) above. Defaults:
 | Prop                | Type                                                      | Default        |
 | ------------------- | --------------------------------------------------------- | -------------- |
 | `position`          | `top-left` / `top-center` / `top-right` / `bottom-*`      | `bottom-right` |
-| `theme`             | `light` / `dark` / `system` / `glass` / `gradient`        | `light`        |
+| `theme`             | `light`/`dark`/`system`/`glass`/`gradient`/`accent`       | `light`        |
 | `richColors`        | `boolean`                                                 | `false`        |
 | `closeButton`       | `boolean`                                                 | `false`        |
 | `duration`          | `number`                                                  | `4000`         |
 | `maxVisibleToasts`  | `number`                                                  | `Infinity`     |
 | `gap`               | `number`                                                  | `14`           |
 | `offset`            | `number` / `string`                                       | `1rem`         |
-| `expand`            | `boolean` (always expanded)                               | `false`        |
-| `expandOnHover`     | `boolean`                                                 | `true`         |
+| `expand`            | `boolean` (`false` = collapsed stack, `true` = full list) | `false`        |
+| `expandOnHover`     | `boolean` (hovering the stack expands it)                 | `true`         |
 | `pauseOnHover`      | `boolean`                                                 | `true`         |
 | `pauseOnWindowBlur` | `boolean`                                                 | `true`         |
 | `animation`         | `slide` / `blur-fade` / `scale` / `spring` / `bounce`     | `slide`        |

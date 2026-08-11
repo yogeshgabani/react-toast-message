@@ -519,6 +519,220 @@
 .rtoast--gradient-default { background: var(--rtoast-grad-default); }
 .rtoast--gradient-loading { background: var(--rtoast-grad-loading); }
 
+/* ----- accent variant (clean card + rounded color bar on the left) ----- */
+.rtoast--accent::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-loading);
+}
+.rtoast--accent .rtoast-inner {
+  padding-left: 28px;
+  align-items: center;
+}
+.rtoast--accent.rtoast--success::before { background: var(--rtoast-success); }
+.rtoast--accent.rtoast--error::before   { background: var(--rtoast-error); }
+.rtoast--accent.rtoast--warning::before { background: var(--rtoast-warning); }
+.rtoast--accent.rtoast--info::before    { background: var(--rtoast-info); }
+.rtoast--accent.rtoast--loading::before { background: var(--rtoast-loading); }
+
+/* Icon sits in a soft tinted circle, like a status badge */
+.rtoast--accent .rtoast-icon::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.12;
+  z-index: -1;
+}
+
+/* RTL: mirror the bar to the right edge */
+[data-dir="rtl"] .rtoast--accent::before {
+  left: auto;
+  right: 10px;
+}
+[data-dir="rtl"] .rtoast--accent .rtoast-inner {
+  padding-left: 16px;
+  padding-right: 28px;
+}
+
+/* ----- border variants (rounded color bar on the chosen edge) -----
+   left-border | right-border | x-border (both sides)
+   top-border | bottom-border | y-border (top + bottom)
+   The bar color follows the toast type via --rtoast-accent-color. */
+.rtoast { --rtoast-accent-color: var(--rtoast-loading); }
+.rtoast--success { --rtoast-accent-color: var(--rtoast-success); }
+.rtoast--error   { --rtoast-accent-color: var(--rtoast-error); }
+.rtoast--warning { --rtoast-accent-color: var(--rtoast-warning); }
+.rtoast--info    { --rtoast-accent-color: var(--rtoast-info); }
+.rtoast--loading { --rtoast-accent-color: var(--rtoast-loading); }
+
+.rtoast--left-border::before,
+.rtoast--x-border::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-accent-color);
+}
+.rtoast--right-border::before,
+.rtoast--x-border::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-accent-color);
+}
+.rtoast--top-border::before,
+.rtoast--y-border::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 14px;
+  right: 14px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-accent-color);
+}
+.rtoast--bottom-border::before,
+.rtoast--y-border::after {
+  content: "";
+  position: absolute;
+  bottom: 8px;
+  left: 14px;
+  right: 14px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-accent-color);
+}
+
+/* content clearance for each bar position */
+.rtoast--left-border .rtoast-inner,
+.rtoast--x-border .rtoast-inner { padding-left: 28px; }
+.rtoast--right-border .rtoast-inner { padding-right: 28px; }
+.rtoast--x-border .rtoast-inner { padding-right: 28px; }
+.rtoast--left-border .rtoast-inner,
+.rtoast--right-border .rtoast-inner,
+.rtoast--x-border .rtoast-inner { align-items: center; }
+.rtoast--top-border .rtoast-inner,
+.rtoast--y-border .rtoast-inner { padding-top: 24px; }
+.rtoast--bottom-border .rtoast-inner,
+.rtoast--y-border .rtoast-inner { padding-bottom: 24px; }
+
+/* status-badge halo behind the icon, same feel as the accent variant */
+.rtoast--left-border .rtoast-icon::before,
+.rtoast--right-border .rtoast-icon::before,
+.rtoast--x-border .rtoast-icon::before,
+.rtoast--top-border .rtoast-icon::before,
+.rtoast--bottom-border .rtoast-icon::before,
+.rtoast--y-border .rtoast-icon::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.12;
+  z-index: -1;
+}
+
+/* ----- solid variant (bold filled surface per type) ----- */
+.rtoast--solid {
+  background: var(--rtoast-loading);
+  color: #ffffff;
+  border-color: transparent;
+}
+.rtoast--solid .rtoast-description { color: rgba(255, 255, 255, 0.85); }
+.rtoast--solid .rtoast-icon { color: #ffffff; }
+.rtoast--solid .rtoast-close { color: rgba(255, 255, 255, 0.85); }
+.rtoast--solid .rtoast-close:hover { background: rgba(255, 255, 255, 0.15); }
+.rtoast--solid-success { background: var(--rtoast-success); }
+.rtoast--solid-error   { background: var(--rtoast-error); }
+.rtoast--solid-warning { background: var(--rtoast-warning); }
+.rtoast--solid-info    { background: var(--rtoast-info); }
+
+/* ----- soft variant (pastel tinted surface, colored text) ----- */
+.rtoast--soft {
+  background: color-mix(in srgb, var(--rtoast-loading) 14%, var(--rtoast-bg));
+  color: var(--rtoast-loading);
+  border-color: transparent;
+}
+.rtoast--soft .rtoast-description { color: inherit; opacity: 0.8; }
+.rtoast--soft-success {
+  background: color-mix(in srgb, var(--rtoast-success) 15%, var(--rtoast-bg));
+  color: color-mix(in srgb, var(--rtoast-success) 80%, var(--rtoast-fg));
+}
+.rtoast--soft-error {
+  background: color-mix(in srgb, var(--rtoast-error) 14%, var(--rtoast-bg));
+  color: color-mix(in srgb, var(--rtoast-error) 80%, var(--rtoast-fg));
+}
+.rtoast--soft-warning {
+  background: color-mix(in srgb, var(--rtoast-warning) 16%, var(--rtoast-bg));
+  color: color-mix(in srgb, var(--rtoast-warning) 72%, var(--rtoast-fg));
+}
+.rtoast--soft-info {
+  background: color-mix(in srgb, var(--rtoast-info) 14%, var(--rtoast-bg));
+  color: color-mix(in srgb, var(--rtoast-info) 80%, var(--rtoast-fg));
+}
+
+/* ----- outline variant (card with a colored border + colored title) ----- */
+.rtoast--outline {
+  background: var(--rtoast-bg);
+  border-width: 1.5px;
+  border-color: var(--rtoast-loading);
+}
+.rtoast--outline-success { border-color: var(--rtoast-success); color: var(--rtoast-success); }
+.rtoast--outline-error   { border-color: var(--rtoast-error);   color: var(--rtoast-error); }
+.rtoast--outline-warning { border-color: var(--rtoast-warning); color: var(--rtoast-warning); }
+.rtoast--outline-info    { border-color: var(--rtoast-info);    color: var(--rtoast-info); }
+.rtoast--outline .rtoast-description { color: var(--rtoast-muted); }
+
+/* ----- neon variant (dark surface with a glowing colored edge) ----- */
+.rtoast--neon {
+  background: #0d1117;
+  color: #f8fafc;
+  border-color: var(--rtoast-loading);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--rtoast-loading) 45%, transparent),
+    var(--rtoast-shadow);
+}
+.rtoast--neon .rtoast-description { color: rgba(248, 250, 252, 0.75); }
+.rtoast--neon .rtoast-close { color: rgba(248, 250, 252, 0.8); }
+.rtoast--neon-success {
+  border-color: var(--rtoast-success);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--rtoast-success) 50%, transparent),
+    var(--rtoast-shadow);
+}
+.rtoast--neon-error {
+  border-color: var(--rtoast-error);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--rtoast-error) 50%, transparent),
+    var(--rtoast-shadow);
+}
+.rtoast--neon-warning {
+  border-color: var(--rtoast-warning);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--rtoast-warning) 50%, transparent),
+    var(--rtoast-shadow);
+}
+.rtoast--neon-info {
+  border-color: var(--rtoast-info);
+  box-shadow:
+    0 0 16px color-mix(in srgb, var(--rtoast-info) 50%, transparent),
+    var(--rtoast-shadow);
+}
+
 /* ----- gradient THEME (apply gradient look to every toast in the portal) ----- */
 .rtoast-portal.rtoast-theme-gradient .rtoast {
   color: #ffffff;
@@ -538,6 +752,59 @@
 .rtoast-portal.rtoast-theme-gradient .rtoast--default { background: var(--rtoast-grad-default); }
 .rtoast-portal.rtoast-theme-gradient .rtoast--loading { background: var(--rtoast-grad-loading); }
 
+/* ----- accent THEME (left color bar on every toast in the portal) ----- */
+.rtoast-portal.rtoast-theme-accent .rtoast::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--rtoast-loading);
+}
+.rtoast-portal.rtoast-theme-accent .rtoast .rtoast-inner {
+  padding-left: 28px;
+  align-items: center;
+}
+.rtoast-portal.rtoast-theme-accent .rtoast--success::before { background: var(--rtoast-success); }
+.rtoast-portal.rtoast-theme-accent .rtoast--error::before   { background: var(--rtoast-error); }
+.rtoast-portal.rtoast-theme-accent .rtoast--warning::before { background: var(--rtoast-warning); }
+.rtoast-portal.rtoast-theme-accent .rtoast--info::before    { background: var(--rtoast-info); }
+.rtoast-portal.rtoast-theme-accent .rtoast--loading::before { background: var(--rtoast-loading); }
+
+/* status-badge halo behind the icon */
+.rtoast-portal.rtoast-theme-accent .rtoast .rtoast-icon::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.12;
+  z-index: -1;
+}
+
+/* keep the card surface clean (white) even when richColors is on — the
+   accent look IS the color signal, the tinted surface would fight it */
+.rtoast-portal.rtoast-theme-accent .rtoast--rich {
+  background: var(--rtoast-bg);
+  color: var(--rtoast-fg);
+  border-color: var(--rtoast-border);
+}
+.rtoast-portal.rtoast-theme-accent .rtoast--rich .rtoast-description {
+  color: var(--rtoast-muted);
+}
+
+/* RTL: mirror the bar to the right edge */
+.rtoast-portal.rtoast-theme-accent[data-dir="rtl"] .rtoast::before {
+  left: auto;
+  right: 10px;
+}
+.rtoast-portal.rtoast-theme-accent[data-dir="rtl"] .rtoast .rtoast-inner {
+  padding-left: 16px;
+  padding-right: 28px;
+}
+
 /* ----- glass THEME (apply glass look to every toast in the portal) ----- */
 .rtoast-portal.rtoast-theme-glass .rtoast {
   background: rgba(255, 255, 255, 0.55);
@@ -546,68 +813,13 @@
   -webkit-backdrop-filter: blur(18px) saturate(180%);
 }
 
-/* ----- collapsed stack effect -----
-   When collapsed (default, not expanded/hovered) the list tightens to a fixed
-   small gap regardless of the user's configured `gap`. Using the flex `gap`
-   property (instead of negative margins) means the visual gap is correct
-   for both column and column-reverse — fixing the inconsistent-gap bug. */
-.rtoast-list--collapsed {
-  gap: 6px;
-}
-
-/* Subtle "stacked behind" hint for older toasts in collapsed mode.
-   Applied to the inner wrapper so framer-motion's transforms on the <li>
-   itself are untouched. */
-.rtoast-list--collapsed .rtoast .rtoast-inner {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.28s ease;
-}
-
-/* Top stacks: newest is first DOM child (visually on top) */
-.rtoast-list--collapsed.rtoast-list--top-left .rtoast:nth-child(2) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--top-center .rtoast:nth-child(2) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--top-right .rtoast:nth-child(2) .rtoast-inner {
-  transform: scale(0.965);
-  opacity: 0.88;
-}
-.rtoast-list--collapsed.rtoast-list--top-left .rtoast:nth-child(n+3) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--top-center .rtoast:nth-child(n+3) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--top-right .rtoast:nth-child(n+3) .rtoast-inner {
-  transform: scale(0.93);
-  opacity: 0.72;
-}
-
-/* Bottom stacks: newest is first DOM child (visually on bottom — closest
-   to viewport edge), so older toasts (higher index) should look stacked
-   behind */
-.rtoast-list--collapsed.rtoast-list--bottom-left .rtoast:nth-child(2) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--bottom-center .rtoast:nth-child(2) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--bottom-right .rtoast:nth-child(2) .rtoast-inner {
-  transform: scale(0.965);
-  opacity: 0.88;
-}
-.rtoast-list--collapsed.rtoast-list--bottom-left .rtoast:nth-child(n+3) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--bottom-center .rtoast:nth-child(n+3) .rtoast-inner,
-.rtoast-list--collapsed.rtoast-list--bottom-right .rtoast:nth-child(n+3) .rtoast-inner {
-  transform: scale(0.93);
-  opacity: 0.72;
-}
-
-.rtoast-list--expanded .rtoast .rtoast-inner {
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.28s ease;
-  transform: none;
-  opacity: 1;
-}
-
-/* Per-toast hover scale: when expandOnHover is enabled, hovering any one
-   toast lifts only that toast back to full scale/opacity — the rest of
-   the stack stays in its collapsed peek state. */
-.rtoast-list--hover-expand.rtoast-list--collapsed .rtoast:hover .rtoast-inner,
-.rtoast-list--hover-expand.rtoast-list--collapsed .rtoast:focus-within .rtoast-inner {
-  transform: none;
-  opacity: 1;
-}
+/* ----- collapsed stack (sonner-style) -----
+   When collapsed (default, not expanded/hovered) only the newest toast is
+   in normal flow; older toasts are absolutely pinned to the screen edge
+   and offset/scaled behind it. The peek offsets, scaling, and hide-beyond-3
+   behaviour are all driven by framer-motion inline styles from ToastItem,
+   so no per-child CSS is needed here. Hovering the stack expands it
+   (handled in Toaster via the hover state → `rtoast-list--expanded`). */
 
 /* ----- RTL support ----- */
 [data-dir="rtl"] .rtoast-inner {
