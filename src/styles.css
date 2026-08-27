@@ -826,6 +826,24 @@
   flex-direction: row-reverse;
 }
 
+/* ----- overflow indicator -----
+   Shown when `maxVisibleToasts` hides older toasts, so they don't just
+   silently expire off-screen with no trace. */
+.rtoast-overflow {
+  align-self: center;
+  pointer-events: none;
+  font-family: var(--rtoast-font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rtoast-muted);
+  background: var(--rtoast-bg);
+  border: 1px solid var(--rtoast-border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  box-shadow: var(--rtoast-shadow);
+  white-space: nowrap;
+}
+
 /* ----- reduced motion ----- */
 @media (prefers-reduced-motion: reduce) {
   .rtoast-icon--spin svg {

@@ -129,6 +129,17 @@ export interface ToastOptions {
   animation?: AnimationPreset;
   className?: string;
   style?: CSSProperties;
+  /** URL of a sound to play when this toast appears (or transitions type,
+   *  e.g. a `toast.promise` loading -> success). Overrides the Toaster's
+   *  `sounds` map for this toast; `false` mutes it even if `sounds` has an
+   *  entry for its type. */
+  sound?: string | false;
+  /** Vibration pattern (ms, or on/off/on/… array per the Vibration API) to
+   *  fire on mobile when this toast appears. Overrides the Toaster's
+   *  `vibrate` map for this toast; `false` mutes it even if `vibrate` has
+   *  an entry for its type. No-op on devices/browsers without vibration
+   *  support (e.g. desktop, iOS Safari). */
+  vibrate?: number | number[] | false;
   onDismiss?: (toast: ToastData) => void;
   onAutoClose?: (toast: ToastData) => void;
 }
@@ -171,8 +182,26 @@ export interface ToasterProps {
   animation?: AnimationPreset;
   dir?: "ltr" | "rtl" | "auto";
   hotkey?: string[];
+  /** Per-type sound URLs, e.g. `{ success: "/sounds/success.mp3" }`. No
+   *  sound plays for a type that has no entry here (and none by default —
+   *  the library ships no audio files). A toast's own `sound` option
+   *  overrides its type's entry. */
+  sounds?: Partial<Record<ToastType, string>>;
+  /** Playback volume (0–1) for `sounds`. Defaults to 1. */
+  soundVolume?: number;
+  /** Per-type vibration patterns, e.g. `{ error: 200 }` or
+   *  `{ success: [40, 30, 40] }`. No vibration for a type with no entry
+   *  here. A toast's own `vibrate` option overrides its type's entry. */
+  vibrate?: Partial<Record<ToastType, number | number[]>>;
   containerStyle?: CSSProperties;
   containerClassName?: string;
   toastOptions?: Partial<ToastOptions>;
   visibleToasts?: number;
+  /** Where the toast portal mounts — an element, or a function returning
+   *  one (called once on mount). Defaults to `document.body`. Useful for
+   *  rendering inside a shadow root, a specific stacking-context container,
+   *  or when multiple independent `<Toaster />`s must stay visually
+   *  scoped. If the function returns `null`/`undefined`, falls back to
+   *  `document.body`. */
+  container?: Element | (() => Element | null | undefined);
 }

@@ -28,25 +28,31 @@ A modern, premium React toast notification library — Sonner-inspired, built wi
 - ⏳ Promise toasts with loading → success / error transitions
 - 🎯 Action / cancel / undo / confirmation toasts
 - ♻️ `toast.update(id, …)` to mutate live toasts
-- ♿ ARIA `role`, `aria-live`, reduced-motion aware, hotkey-focusable
+- 🔊 Optional sound + mobile vibration, per toast type or per individual toast
+- 🎯 `container` prop to mount the portal anywhere (shadow root, modal, …)
+- ♿ ARIA `role`, `aria-live`, reduced-motion aware, hotkey-focusable, arrow-key toast navigation, Escape-to-dismiss
 - 🪶 Lightweight, tree-shakeable ESM + CJS builds, SSR-safe
 
-## What's new in v1.2.0
+## What's new in v1.3.0
 
 **Added**
 
-- Sonner-style collapsed stack: by default older toasts now tuck behind the newest one and the whole stack expands on hover (`expand` / `expandOnHover` props).
-- 11 new visual variants: `accent`, `solid`, `soft`, `outline`, `neon`, plus 6 border-bar styles — `left-border`, `right-border`, `x-border`, `top-border`, `bottom-border`, `y-border`.
-- New `theme="accent"` — puts a rounded color bar on every toast in the portal.
+- Optional **sound** per toast type or per individual toast (`sounds`, `soundVolume`, `sound`) — the library ships no audio files, nothing plays until you point it at a URL.
+- Optional **mobile vibration** per toast type or per individual toast (`vibrate`), using the same shape as sound.
+- **`container` prop** — mount the toast portal anywhere (a shadow root, a specific stacking context, a second scoped `<Toaster />`) instead of always `document.body`.
+- **Overflow indicator** — a `+N more` badge appears when `maxVisibleToasts` hides older toasts, instead of them silently expiring with no trace.
+- **`Escape`** dismisses whichever toast is currently focused; **`↓`/`↑`** arrow keys jump between toasts once one has focus.
+- `toast.error(err)` now accepts an `Error` object directly and uses `err.message` (or `err.name`) as the title — a plain string still works as before.
+- First test suite (Vitest + React Testing Library, `npm test`) covering the store, the `toast()` API, and `<Toaster />` behaviour.
+
+**Fixed**
+
+- `dir="auto"` (the default) never actually resolved to `rtl`, so the RTL CSS (icon/text order, accent bar side) silently never engaged even on an RTL page. Now resolved from the document's real direction, and kept in sync if it changes.
+- `hotkey` only searched the Toaster's default position for a toast to focus, missing any toast rendered at a per-toast `position` override. Now searches the whole portal.
 
 **Changed**
 
-- `maxVisibleToasts` is now sonner-style: the **newest** toasts always show and the oldest slide out (previously new toasts waited in a hidden queue). Hidden toasts keep expiring in the background.
-- An explicit per-toast `variant` (`glass`, `gradient`, …) now wins over the global `richColors` flag instead of being painted over by it.
-
-**Breaking (internal API only)**
-
-- The internal `queue` array and `promote()` method were removed from `useToastStore`. The `toast` API and all `<Toaster />` props are unchanged — this only affects code that read the store's queue directly.
+- Center-positioned toasts with an explicit `swipeDirection: "x"` now feel biased toward the natural swipe-away direction for the resolved `dir` (mirrored in RTL).
 
 ## Install
 
@@ -101,7 +107,10 @@ import { Toaster } from "react-toaster-message";
                                  // bottom-left | bottom-center | bottom-right
   offset="1rem"                  // distance from the viewport edge (number = px)
   gap={14}                       // pixels between toasts when expanded
-  dir="auto"                     // ltr | rtl | auto — drives swipe direction
+  dir="auto"                     // ltr | rtl | auto — mirrors layout (icon/text
+                                 //   order, accent bar side) and, for
+                                 //   center-positioned toasts, which way
+                                 //   feels natural to swipe away
 
   /* ─── Look & feel ───────────────────────────────────────────── */
   theme="light"                  // light | dark | system | glass | gradient |
@@ -133,8 +142,28 @@ import { Toaster } from "react-toaster-message";
   pauseOnWindowBlur              // tab/window blur → timers pause
 
   /* ─── Keyboard / a11y ───────────────────────────────────────── */
-  hotkey={["altKey", "KeyT"]}    // global shortcut to focus the newest toast
-                                 //   (event modifier keys + KeyboardEvent.code)
+  hotkey={["altKey", "KeyT"]}    // press Alt+T anywhere on the page →
+                                 //   focuses the frontmost toast (any
+                                 //   position). From there: Tab moves
+                                 //   through its action/cancel/close
+                                 //   buttons, ↑/↓ arrows jump between
+                                 //   toasts, Escape dismisses the focused
+                                 //   one. Modifier keys (altKey/ctrlKey/
+                                 //   metaKey/shiftKey) + a KeyboardEvent.code
+                                 //   (e.g. "KeyT", "Digit1"). Set to `[]`
+                                 //   or `undefined` to disable.
+
+  /* ─── Sound & vibration ─────────────────────────────────────── */
+  sounds={{                      // per-type sound URLs — no sound plays
+    success: "/sounds/success.mp3", //   for a type with no entry here (the
+    error:   "/sounds/error.mp3",   //   library ships no audio files, so
+  }}                              //   nothing plays unless you set this)
+  soundVolume={0.6}              // 0–1, applies to every `sounds` entry
+                                 //   (and to a per-toast `sound` override)
+  vibrate={{                     // per-type vibration pattern (ms, or an
+    error: 200,                  //   on/off/on/… array). Mobile only —
+    success: [40, 30, 40],       //   silently does nothing on desktop /
+  }}                              //   browsers without the Vibration API.
 
   /* ─── Defaults applied to every toast call ──────────────────── */
   toastOptions={{
@@ -143,6 +172,17 @@ import { Toaster } from "react-toaster-message";
     classNames: { toast: "my-toast" },
     styles:     { toast: { borderRadius: 12 } },
   }}
+
+  /* ─── Portal target (advanced) ──────────────────────────────── */
+  container={() => document.getElementById("modal-root")}
+                                 // where the toast portal mounts — an
+                                 //   element, or a function returning one.
+                                 //   Defaults to `document.body`. Use this
+                                 //   to render inside a shadow root, a
+                                 //   specific stacking context (e.g. so
+                                 //   toasts stay above an open modal), or
+                                 //   to keep two `<Toaster />`s scoped to
+                                 //   different parts of the page.
 
   /* ─── Custom container styling (advanced) ───────────────────── */
   containerClassName="my-portal"
@@ -163,6 +203,9 @@ import { toast } from "react-toaster-message";
 toast("Hello world");                       // default
 toast.success("Saved!");
 toast.error("Failed", { description: "Try again later." });
+toast.error(err);                           // err is an Error → uses err.message
+                                            //   (or err.name if message is empty).
+                                            //   A plain string still works as before.
 toast.warning("Heads up");
 toast.info("New update available");
 toast.loading("Saving…");                   // stays until dismissed/updated
@@ -194,6 +237,13 @@ toast("Item moved to trash", {
 
   icon: "🗑️",                                // any ReactNode (string/JSX/svg)
   animation: "blur-fade",                   // override the global animation
+  sound: "/sounds/ding.mp3",                // overrides the Toaster's `sounds`
+                                            //   map for this toast; `false`
+                                            //   mutes it even if `sounds` has
+                                            //   an entry for its type
+  vibrate: 200,                             // overrides the Toaster's `vibrate`
+                                            //   map for this toast (ms, or an
+                                            //   on/off/on/… array); `false` mutes it
 
   className: "my-toast",                    // attached to the toast <li>
   style: { padding: 20 },
@@ -264,6 +314,108 @@ toast("Delete this project?", {
 });
 ```
 
+### Sound
+
+The library ships **no audio files** — nothing plays unless you point it at
+a sound (an `.mp3`/`.wav`/`.ogg` URL: a path under your `public/` folder, or
+a hosted file). Map a URL per toast type on `<Toaster sounds={...} />`:
+
+```tsx
+<Toaster
+  sounds={{
+    success: "/sounds/success.mp3",
+    error: "/sounds/error.mp3",
+  }}
+  soundVolume={0.6}              // 0–1, defaults to 1
+/>
+```
+
+**Effect:** with the config above, `toast.success(...)` plays
+`success.mp3` and `toast.error(...)` plays `error.mp3`; every other type
+(`default`, `warning`, `info`, `loading`, …) stays silent since it has no
+entry in the map. A `toast.promise()` loading → success transition plays
+the *success* sound the moment it resolves (loading itself stays silent
+unless you add a `loading` entry too).
+
+Override or mute it per call:
+
+```tsx
+toast.success("Saved!", { sound: "/sounds/custom-ding.mp3" }); // this call only
+toast.success("Saved quietly", { sound: false });              // never plays, even with `sounds` set
+```
+
+Browsers block audio before any user interaction with the page (autoplay
+policy) — a sound triggered by a `toast()` call from a click handler plays
+fine; one fired on page load, before the user has clicked/typed anything,
+may be silently blocked. That failure is swallowed rather than thrown.
+
+### Vibration (mobile haptics)
+
+Same shape as sound, using the same `Partial<Record<ToastType, …>>` map —
+this time of vibration patterns instead of URLs:
+
+```tsx
+<Toaster
+  vibrate={{
+    error: 200,              // one 200ms buzz
+    success: [40, 30, 40],   // buzz, pause 30ms, buzz — on/off/on/… pairs
+  }}
+/>
+```
+
+**Effect:** `toast.error(...)` triggers a 200ms vibration, `toast.success(...)`
+a double-tap pattern; every other type stays silent (no entry in the map).
+Override or mute per call the same way as sound —
+`toast.error("bad", { vibrate: 400 })` or `{ vibrate: false }`.
+
+Only does anything on devices/browsers that support the
+[Vibration API](https://developer.mozilla.org/en-US/docs/Web/API/Vibration_API)
+— mobile Chrome/Firefox on Android, mainly. Desktop browsers and iOS Safari
+don't implement it, so this is a no-op there rather than an error.
+
+### Custom mount target
+
+By default the toast portal renders into `document.body`. Point it
+elsewhere with `container`:
+
+```tsx
+<Toaster container={() => document.getElementById("modal-root")} />
+```
+
+**Effect:** toasts render inside `#modal-root` instead of `document.body` —
+useful when an open modal/dialog traps focus or sits in its own stacking
+context and toasts need to render inside it to stay visible/reachable, when
+rendering inside a shadow root, or when running two independent
+`<Toaster />`s that need to stay visually scoped to different parts of the
+page. If the function returns `null`/`undefined` (e.g. the element isn't
+mounted yet), it falls back to `document.body`.
+
+### Keyboard shortcuts
+
+```tsx
+<Toaster hotkey={["altKey", "KeyT"]} />   // default — change or set to [] to disable
+```
+
+**Effect:**
+
+- **`Alt` + `T`** (or whatever `hotkey` is set to) — jumps focus to the
+  frontmost toast on screen, at any position. Useful for keyboard-only
+  users who don't want to `Tab` through the rest of the page first.
+- **`Tab`**, once a toast is focused — moves into its action / cancel /
+  close buttons.
+- **`↓` / `↑`** (arrow keys), while a toast is focused — jumps to the
+  next / previous toast, wrapping around at the ends. Does nothing when
+  focus isn't on a toast, so it never hijacks arrow keys used elsewhere on
+  the page (a `<select>`, a text input, …).
+- **`Escape`**, while a toast (or one of its buttons) is focused — dismisses
+  that toast, the same as clicking its ✕. Toasts created with
+  `dismissible: false` ignore it, same as they ignore the close button and
+  swipe.
+
+`hotkey` accepts any combination of the modifier keys (`altKey`, `ctrlKey`,
+`metaKey`, `shiftKey`) plus one `KeyboardEvent.code`, e.g.
+`["ctrlKey", "shiftKey", "KeyN"]` for Ctrl+Shift+N.
+
 ### `<Toaster />` props (cheat-sheet)
 
 Full annotated reference is in [Quick start](#quick-start) above. Defaults:
@@ -285,14 +437,18 @@ Full annotated reference is in [Quick start](#quick-start) above. Defaults:
 | `animation`         | `slide` / `blur-fade` / `scale` / `spring` / `bounce`     | `slide`        |
 | `dir`               | `ltr` / `rtl` / `auto`                                    | `auto`         |
 | `hotkey`            | `string[]` — e.g. `["altKey", "KeyT"]`                    | `alt+T`        |
+| `sounds`            | `Partial<Record<ToastType, string>>` — sound URL per type | `undefined`    |
+| `soundVolume`       | `number` (0–1)                                             | `1`            |
+| `vibrate`           | `Partial<Record<ToastType, number \| number[]>>`          | `undefined`    |
+| `container`         | `Element` / `() => Element \| null \| undefined`          | `document.body`|
 | `toastOptions`      | `Partial<ToastOptions>` — defaults applied to every toast | `{}`           |
 
 ### Per-toast options
 
 See the fully-commented `toast(...)` block in [Quick start](#quick-start) for
 every per-call option (`description`, `action`, `cancel`, `icon`, `variant`,
-`richColors`, `progressBar`, `draggable`, `swipeDirection`, `onDismiss`,
-`onAutoClose`, `className(s)`, `style(s)`, …).
+`richColors`, `progressBar`, `draggable`, `swipeDirection`, `sound`, `vibrate`,
+`onDismiss`, `onAutoClose`, `className(s)`, `style(s)`, …).
 
 ## Theming
 
@@ -354,7 +510,9 @@ base theme `light`/`dark` and call `toast.success("…", { variant: "gradient" }
 - `role="status"` for default toasts, `role="alert"` for error / warning
 - `aria-live="polite"` (or `assertive` for errors)
 - Respects `prefers-reduced-motion`
-- Hotkey (`alt+T` by default) focuses the most recent toast
+- Hotkey (`alt+T` by default) focuses the frontmost toast, `↓`/`↑` move between toasts — see [Keyboard shortcuts](#keyboard-shortcuts)
+- `Escape`, while a toast is focused, dismisses it (unless `dismissible: false`)
+- The overflow badge (when `maxVisibleToasts` hides older toasts) is `aria-live="polite"` so screen readers announce the hidden count
 
 ## SSR
 

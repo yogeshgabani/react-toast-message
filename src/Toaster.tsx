@@ -14,6 +14,14 @@ const POSITION_LIST: ToastPosition[] = [
   "bottom-right",
 ];
 
+function resolveDocumentDir(): "ltr" | "rtl" {
+  const attr = document.documentElement.getAttribute("dir");
+  if (attr === "rtl" || attr === "ltr") return attr;
+  return getComputedStyle(document.documentElement).direction === "rtl"
+    ? "rtl"
+    : "ltr";
+}
+
 function getOffsetStyle(position: ToastPosition, offset: string) {
   const style: React.CSSProperties = { position: "fixed", zIndex: 999999 };
   if (position.startsWith("top")) style.top = offset;
@@ -45,6 +53,10 @@ export function Toaster(props: ToasterProps) {
     animation = "slide",
     dir = "auto",
     hotkey = ["altKey", "KeyT"],
+    sounds,
+    soundVolume,
+    vibrate,
+    container,
     containerStyle,
     containerClassName,
     toastOptions,
@@ -59,14 +71,60 @@ export function Toaster(props: ToasterProps) {
   const paused = useToastStore((s) => s.paused);
   const expanded = useToastStore((s) => s.expanded);
 
-  const [mounted, setMounted] = useState(false);
+  // Resolved lazily in an effect (not eagerly at module scope) so the
+  // portal never renders during SSR — `document` doesn't exist there, and
+  // `container` may itself read from `document`.
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+  // "auto" is resolved from the host document's actual direction so the
+  // RTL CSS (accent bar side, icon/text order) engages even though nothing
+  // was passed explicitly — previously "auto" was written straight to
+  // `data-dir` and never matched the `[data-dir="rtl"]` selectors.
+  const [resolvedDir, setResolvedDir] = useState<"ltr" | "rtl">(
+    dir === "auto" ? "ltr" : dir,
+  );
   // Which position group the cursor is currently over — hovering a
   // collapsed stack expands the whole stack (sonner behaviour).
   const [hoverPos, setHoverPos] = useState<ToastPosition | null>(null);
-  const containerRef = useRef<HTMLOListElement | null>(null);
+  const portalRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setMounted(true);
+    const target = typeof container === "function" ? container() : container;
+    setPortalTarget(target ?? document.body);
+  }, [container]);
+
+  useEffect(() => {
+    if (dir !== "auto") {
+      setResolvedDir(dir);
+      return;
+    }
+    setResolvedDir(resolveDocumentDir());
+    const observer = new MutationObserver(() => setResolvedDir(resolveDocumentDir()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["dir"],
+    });
+    return () => observer.disconnect();
+  }, [dir]);
+
+  // Escape dismisses whichever toast currently has focus (reached via Tab
+  // or the `hotkey`) — mirrors the close-button/swipe dismiss path so
+  // onDismiss fires and `dismissible: false` toasts are left alone.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const active = document.activeElement as HTMLElement | null;
+      const toastEl = active?.closest<HTMLElement>("[data-toast-id]");
+      const idAttr = toastEl?.dataset.toastId;
+      if (idAttr === undefined) return;
+      const store = useToastStore.getState();
+      const t = store.toasts.find((x) => String(x.id) === idAttr);
+      if (!t || t.dismissible === false) return;
+      e.preventDefault();
+      t.onDismiss?.(t);
+      store.dismiss(t.id);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   useEffect(() => {
@@ -90,7 +148,10 @@ export function Toaster(props: ToasterProps) {
     };
   }, [pauseOnWindowBlur, setPaused]);
 
-  // Hotkey to focus latest toast
+  // Hotkey focuses the frontmost toast — across every position, not just
+  // the Toaster's default one, so a per-toast `position` override is still
+  // reachable. From there Tab moves through its action/cancel/close
+  // buttons, and Escape (below) dismisses it.
   useEffect(() => {
     if (!hotkey || hotkey.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
@@ -103,7 +164,7 @@ export function Toaster(props: ToasterProps) {
       });
       if (matchMod) {
         e.preventDefault();
-        const first = containerRef.current?.querySelector<HTMLElement>(
+        const first = portalRef.current?.querySelector<HTMLElement>(
           "[data-toast-id]",
         );
         first?.focus();
@@ -112,6 +173,29 @@ export function Toaster(props: ToasterProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [hotkey]);
+
+  // Arrow-key navigation between toasts once one already has focus (via the
+  // hotkey or Tab) — does nothing when focus is elsewhere on the page, so
+  // it never steals arrow keys from the rest of the app.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const active = document.activeElement as HTMLElement | null;
+      const currentEl = active?.closest<HTMLElement>("[data-toast-id]");
+      if (!currentEl) return;
+      const all = Array.from(
+        portalRef.current?.querySelectorAll<HTMLElement>("[data-toast-id]") ?? [],
+      );
+      const idx = all.indexOf(currentEl);
+      if (idx === -1 || all.length < 2) return;
+      e.preventDefault();
+      const nextIdx =
+        e.key === "ArrowDown" ? (idx + 1) % all.length : (idx - 1 + all.length) % all.length;
+      all[nextIdx]?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Group toasts by position (per-toast override allowed)
   const grouped = useMemo(() => {
@@ -164,14 +248,15 @@ export function Toaster(props: ToasterProps) {
     return () => clearTimeout(timer);
   }, [grouped, max, paused]);
 
-  if (!mounted) return null;
+  if (!portalTarget) return null;
 
   return createPortal(
     <div
+      ref={portalRef}
       className={`rtoast-portal rtoast-theme-${theme} ${containerClassName ?? ""}`.trim()}
       style={containerStyle}
       data-rich-colors={richColors ? "true" : undefined}
-      data-dir={dir}
+      data-dir={resolvedDir}
     >
       {POSITION_LIST.map((pos) => {
         const list = grouped[pos];
@@ -184,7 +269,6 @@ export function Toaster(props: ToasterProps) {
         return (
           <ol
             key={pos}
-            ref={pos === position ? containerRef : undefined}
             className={`rtoast-list rtoast-list--${pos} ${
               isExpanded ? "rtoast-list--expanded" : "rtoast-list--collapsed"
             } ${expandOnHover ? "rtoast-list--hover-expand" : ""}`.trim()}
@@ -220,13 +304,27 @@ export function Toaster(props: ToasterProps) {
                   expand={isExpanded}
                   closeButtonDefault={closeButton}
                   richColorsDefault={richColors}
+                  dir={resolvedDir}
+                  sounds={sounds}
+                  soundVolume={soundVolume}
+                  vibrate={vibrate}
                 />
               ))}
             </AnimatePresence>
+            {isFinite(max) && list.length > max && (
+              <li
+                className="rtoast-overflow"
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                +{list.length - max} more
+              </li>
+            )}
           </ol>
         );
       })}
     </div>,
-    document.body,
+    portalTarget,
   );
 }

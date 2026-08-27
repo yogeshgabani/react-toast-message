@@ -100,7 +100,7 @@ const CATEGORIES: { id: DemoCategory; label: string; hint: string }[] = [
 
 /* ───────── Site stats (photo-style strip) + What's New changelog ───────── */
 
-const SITE_LAST_UPDATED = "August 11, 2026";
+const SITE_LAST_UPDATED = "August 27, 2026";
 const STATS_NAMESPACE = "react-toaster-message-demo";
 const SESSION_VISIT_FLAG = "rtm_visited";
 const WHATS_NEW_STORAGE_KEY = "rtm-whatsnew-seen";
@@ -126,11 +126,40 @@ type ChangelogEntry = {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.3.0",
+    date: "August 27, 2026",
+    highlight:
+      "Optional sound + mobile vibration per toast, a custom portal `container`, an overflow indicator, Escape/arrow-key toast navigation, and a first test suite.",
+    isLatest: true,
+    sections: [
+      {
+        kind: "added",
+        title: "Added",
+        items: [
+          "**Sound** per toast type or per individual toast (`sounds`, `soundVolume`, `sound`) — no audio ships with the library; nothing plays until you set a URL.",
+          "**Mobile vibration** per toast type or per individual toast (`vibrate`), same shape as sound.",
+          "**`container` prop** — mount the portal anywhere (shadow root, a specific stacking context, a second scoped `<Toaster />`) instead of always `document.body`.",
+          "**Overflow indicator** — a `+N more` badge when `maxVisibleToasts` hides older toasts.",
+          "**`Escape`** dismisses the focused toast; **`↓`/`↑`** arrow keys jump between toasts.",
+          "`toast.error(err)` accepts an `Error` object directly and uses `err.message`/`err.name` as the title.",
+          "First test suite (Vitest + React Testing Library, `npm test`).",
+        ],
+      },
+      {
+        kind: "fixed",
+        title: "Fixed",
+        items: [
+          "`dir=\"auto\"` never resolved to `rtl`, so RTL CSS silently never engaged even on an RTL page — now resolved from the document's real direction.",
+          "`hotkey` only searched the default position for a toast to focus, missing per-toast `position` overrides — now searches the whole portal.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.2.0",
     date: "August 11, 2026",
     highlight:
       "Sonner-style collapsed stack, 11 new visual variants (accent, solid, soft, outline, neon + 6 border-bar styles), accent theme, and smarter maxVisibleToasts.",
-    isLatest: true,
     sections: [
       {
         kind: "added",
@@ -1220,7 +1249,7 @@ toast.update(id, {
           </div>
 
           <div className="hero-content">
-            <span className="pill">V1.2.0 · Framer Motion · SSR-safe</span>
+            <span className="pill">V1.3.0 · Framer Motion · SSR-safe</span>
             <h1 className="title">
               Premium toasts
               <br />

@@ -12,12 +12,15 @@ import { ActionButton } from "./components/ActionButton";
 import { CloseButton } from "./components/CloseButton";
 import { Icon } from "./components/Icon";
 import { ProgressBar } from "./components/ProgressBar";
+import { playSound } from "./sound";
 import { useToastStore } from "./store";
+import { vibrateDevice } from "./vibrate";
 import type {
   AnimationPreset,
   SwipeDirection,
   ToastData,
   ToastPosition,
+  ToastType,
 } from "./types";
 import {
   getVariants,
@@ -36,6 +39,10 @@ interface ToastItemProps {
   expand: boolean;
   closeButtonDefault: boolean;
   richColorsDefault: boolean;
+  dir: "ltr" | "rtl";
+  sounds?: Partial<Record<ToastType, string>>;
+  soundVolume?: number;
+  vibrate?: Partial<Record<ToastType, number | number[]>>;
 }
 
 function resolveSwipe(
@@ -58,6 +65,10 @@ function ToastItemInner(
     expand,
     closeButtonDefault,
     richColorsDefault,
+    dir,
+    sounds,
+    soundVolume,
+    vibrate,
   }: ToastItemProps,
   ref: React.ForwardedRef<HTMLLIElement>,
 ) {
@@ -120,6 +131,29 @@ function ToastItemInner(
 
   const closeRef = useRef(close);
   closeRef.current = close;
+
+  // Plays on mount and again whenever `type` changes (e.g. a promise toast
+  // going loading -> success) — not on every re-render, since `sounds` and
+  // `soundVolume` are intentionally left out of the deps: they're
+  // Toaster-level config that isn't expected to change mid-session, and
+  // including the `sounds` object (a fresh literal most renders) would
+  // replay the sound on unrelated re-renders (hover, drag, …).
+  useEffect(() => {
+    if (toast.sound === false) return;
+    const url = typeof toast.sound === "string" ? toast.sound : sounds?.[toast.type];
+    if (!url) return;
+    playSound(url, soundVolume);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast.type, toast.sound]);
+
+  // Same mount/type-change trigger as the sound effect above.
+  useEffect(() => {
+    if (toast.vibrate === false) return;
+    const pattern = toast.vibrate ?? vibrate?.[toast.type];
+    if (!pattern) return;
+    vibrateDevice(pattern);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast.type, toast.vibrate]);
 
   useEffect(() => {
     // If the toast was given an absolute expiry by the store, prefer it
@@ -206,10 +240,23 @@ function ToastItemInner(
   const swipe = resolveSwipe(toast.swipeDirection, position);
   const draggable = toast.draggable !== false;
 
+  // Edge-anchored toasts (left/right) already have a natural swipe-out
+  // direction from their position. Center toasts have no such edge, so for
+  // those `dir` picks which way feels natural to swipe away — mirrored in
+  // RTL, matching reading direction (the other side stays draggable, just
+  // with more resistance).
+  const isCenterPos = position.endsWith("center");
+  const dragElastic =
+    swipe === "x" && isCenterPos
+      ? dir === "rtl"
+        ? { left: 1, right: 0.4, top: 0.3, bottom: 0.3 }
+        : { left: 0.4, right: 1, top: 0.3, bottom: 0.3 }
+      : { left: 1, right: 1, top: 0.3, bottom: 0.3 };
+
   const dragProps = draggable
     ? {
         drag: swipe as "x" | "y",
-        dragElastic: { left: 1, right: 1, top: 0.3, bottom: 0.3 },
+        dragElastic,
         dragConstraints: { left: 0, right: 0, top: 0, bottom: 0 },
         onDragEnd: (
           _e: MouseEvent | TouchEvent | PointerEvent,

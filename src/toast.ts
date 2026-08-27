@@ -24,8 +24,9 @@ function success(title: ReactNode, options?: ToastOptions) {
   return emit("success", title, options);
 }
 
-function error(title: ReactNode, options?: ToastOptions) {
-  return emit("error", title, options);
+function error(title: ReactNode | Error, options?: ToastOptions) {
+  const resolved = title instanceof Error ? title.message || title.name : title;
+  return emit("error", resolved, options);
 }
 
 function warning(title: ReactNode, options?: ToastOptions) {
