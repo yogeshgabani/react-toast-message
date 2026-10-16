@@ -15,11 +15,17 @@ interface ToastStoreState {
   toasts: ToastData[];
   maxVisible: number;
   defaultDuration: number;
+  /** Pointer is over a toast list (set only when the Toaster's
+   *  `pauseOnHover` is on). */
   paused: boolean;
+  /** Browser window/tab lost focus. Tracked unconditionally — each toast
+   *  decides via its own `pauseOnWindowBlur` whether this pauses it. */
+  windowBlurred: boolean;
   expanded: boolean;
   setMaxVisible: (n: number) => void;
   setDefaultDuration: (n: number) => void;
   setPaused: (p: boolean) => void;
+  setWindowBlurred: (b: boolean) => void;
   setExpanded: (e: boolean) => void;
   add: (toast: ToastData) => string | number;
   update: (id: string | number, patch: Partial<ToastData>) => void;
@@ -28,12 +34,18 @@ interface ToastStoreState {
   remove: (id?: string | number) => void;
 }
 
+/** A toast reporting determinate progress stays up until the work is done,
+ *  regardless of any `duration` — see `ToastOptions.progress`. */
+export const hasProgress = (t: Pick<ToastData, "progress">) =>
+  typeof t.progress === "number";
+
 function computeExpiresAt(
   toast: ToastData,
   others: ToastData[],
   defaultDuration: number,
   now = Date.now(),
 ): number | undefined {
+  if (hasProgress(toast)) return undefined;
   const rawDuration =
     toast.duration ?? (toast.type === "loading" ? Infinity : defaultDuration);
 
@@ -57,12 +69,14 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
   maxVisible: Infinity,
   defaultDuration: 4000,
   paused: false,
+  windowBlurred: false,
   expanded: false,
 
   setMaxVisible: (n) =>
     set({ maxVisible: n === Infinity ? Infinity : Math.max(1, n) }),
   setDefaultDuration: (n) => set({ defaultDuration: Math.max(0, n) }),
   setPaused: (p) => set({ paused: p }),
+  setWindowBlurred: (b) => set({ windowBlurred: b }),
   setExpanded: (e) => set({ expanded: e }),
 
   add: (toast) => {
@@ -85,10 +99,36 @@ export const useToastStore = create<ToastStoreState>((set, get) => ({
     const patchToast = (t: ToastData): ToastData => {
       if (t.id !== id) return t;
       const merged = { ...t, ...patch };
+      // A type change (e.g. loading -> success once an upload finishes)
+      // ends the progress phase, unless the patch sets progress itself.
+      if (
+        patch.type !== undefined &&
+        patch.type !== t.type &&
+        !("progress" in patch)
+      ) {
+        merged.progress = undefined;
+      }
+      // Likewise, leaving "loading" drops the Infinity duration that
+      // `toast.loading()` sets — otherwise the common
+      // `toast.success("Done", { id })` follow-up never auto-closed.
+      if (
+        t.type === "loading" &&
+        patch.type !== undefined &&
+        patch.type !== "loading" &&
+        t.duration === Infinity &&
+        !("duration" in patch)
+      ) {
+        merged.duration = undefined;
+      }
       // When duration changes via update (e.g. loading -> success on a
-      // promise toast), recompute expiry from "now" with stagger so the
-      // FIFO order continues to hold.
-      if (patch.duration !== undefined || patch.type !== undefined) {
+      // promise toast), or the toast starts/stops reporting progress,
+      // recompute expiry from "now" with stagger so the FIFO order
+      // continues to hold.
+      if (
+        patch.duration !== undefined ||
+        patch.type !== undefined ||
+        hasProgress(merged) !== hasProgress(t)
+      ) {
         const recomputed: ToastData = { ...merged, expiresAt: undefined };
         recomputed.expiresAt = computeExpiresAt(
           recomputed,

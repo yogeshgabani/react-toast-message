@@ -1,7 +1,7 @@
 {
   "name": "react-toaster-message",
-  "version": "1.3.0",
-  "description": "A modern, premium React toast notification library, built with Framer Motion, fully accessible, SSR-safe, and tree-shakeable.",
+  "version": "1.4.0",
+  "description": "Premium React toast notifications \u2014 Sonner-style stacking, Framer Motion animations, promise & upload-progress toasts, 14 variants, accessible, SSR-safe, TypeScript-first.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -23,8 +23,8 @@
     "**/*.css"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "node init && tsup",
+    "dev": "node init && tsup --watch",
     "demo": "vite examples",
     "demo:build": "vite build examples",
     "typecheck": "tsc --noEmit",
@@ -35,12 +35,25 @@
   "keywords": [
     "react",
     "toast",
+    "react-toast",
+    "toaster",
+    "toast-notification",
+    "react-notification",
     "notification",
+    "notifications",
+    "snackbar",
+    "alert",
     "sonner",
+    "sonner-alternative",
+    "react-hot-toast-alternative",
+    "react-toastify-alternative",
+    "nextjs",
+    "upload-progress",
+    "progress",
     "framer-motion",
     "accessible",
     "animation",
-    "premium",
+    "swipe",
     "typescript"
   ],
   "author": "yogeshgabani",
@@ -52,13 +65,15 @@
   "bugs": {
     "url": "https://github.com/yogeshgabani/react-toast-message/issues"
   },
-  "homepage": "https://github.com/yogeshgabani/react-toast-message#readme",
+  "homepage": "https://react-toast-message.netlify.app/",
   "peerDependencies": {
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0"
   },
   "dependencies": {
+    "dotenv": "^8.2.0",
     "framer-motion": "^11.0.0",
+    "node-fetch": "^3.3.2",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

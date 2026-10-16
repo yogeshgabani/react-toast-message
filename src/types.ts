@@ -120,6 +120,13 @@ export interface ToastOptions {
   variant?: ToastVisualVariant;
   richColors?: boolean;
   progressBar?: boolean;
+  /** Determinate progress (0–1) for long-running work such as uploads or
+   *  exports — renders a bar that fills as you report progress with
+   *  `toast.progress(id, value)`. A toast with a numeric `progress` never
+   *  auto-closes; it's cleared automatically once the toast changes type
+   *  (e.g. `toast.success("Done", { id })`), which also starts its timer.
+   *  Unrelated to `progressBar`, which is the auto-close countdown. */
+  progress?: number;
   pauseOnHover?: boolean;
   pauseOnWindowBlur?: boolean;
   draggable?: boolean;

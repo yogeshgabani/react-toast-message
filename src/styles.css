@@ -360,6 +360,21 @@
   animation-fill-mode: forwards;
 }
 
+/* determinate progress (toast.progress) — fills instead of draining.
+   Declared before the per-type colors so a success/error toast that still
+   reports progress keeps its semantic color. */
+.rtoast-progress--determinate {
+  height: 4px;
+}
+.rtoast-progress--determinate .rtoast-progress__bar {
+  animation: none;
+  background: var(--rtoast-progress-color, var(--rtoast-info));
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-dir="rtl"] .rtoast-progress--determinate .rtoast-progress__bar {
+  transform-origin: right;
+}
+
 .rtoast--success .rtoast-progress__bar { background: var(--rtoast-success); }
 .rtoast--error .rtoast-progress__bar { background: var(--rtoast-error); }
 .rtoast--warning .rtoast-progress__bar { background: var(--rtoast-warning); }
@@ -851,6 +866,9 @@
   }
   .rtoast-progress__bar {
     animation: none;
+  }
+  .rtoast-progress--determinate .rtoast-progress__bar {
+    transition: none;
   }
 }
 

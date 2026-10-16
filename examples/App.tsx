@@ -100,7 +100,7 @@ const CATEGORIES: { id: DemoCategory; label: string; hint: string }[] = [
 
 /* ───────── Site stats (photo-style strip) + What's New changelog ───────── */
 
-const SITE_LAST_UPDATED = "August 27, 2026";
+const SITE_LAST_UPDATED = "October 16, 2026";
 const STATS_NAMESPACE = "react-toaster-message-demo";
 const SESSION_VISIT_FLAG = "rtm_visited";
 const WHATS_NEW_STORAGE_KEY = "rtm-whatsnew-seen";
@@ -126,11 +126,52 @@ type ChangelogEntry = {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.4.0",
+    date: "October 16, 2026",
+    highlight:
+      "Upload/progress toasts with `toast.progress()`, a batch of timing and accessibility fixes, and a refreshed demo site.",
+    isLatest: true,
+    sections: [
+      {
+        kind: "added",
+        title: "Added",
+        items: [
+          "**Progress toasts** — pass `progress` (0–1) and call `toast.progress(id, value)` to drive a live determinate bar for uploads, exports or any long task. The toast stays up while progress is reported and switches to a normal timed toast on `toast.success(…, { id })`.",
+          "Per-toast `pauseOnHover` and `pauseOnWindowBlur` now actually work (they were typed but ignored).",
+        ],
+      },
+      {
+        kind: "fixed",
+        title: "Fixed",
+        items: [
+          "`toast.loading()` followed by `toast.success(\"…\", { id })` left the success toast on screen forever — it now auto-closes.",
+          "The countdown `progressBar` jumped ahead of the real timer whenever the toast re-rendered (hover, a new toast arriving).",
+          "`dismissible: false` toasts could still be swiped away.",
+          "`pauseOnHover={false}` still paused a toast while the pointer was over it.",
+          "`toastOptions.duration` was ignored in favour of `duration`.",
+          "Two `toast.promise()` calls in the same millisecond shared one toast.",
+          "`toast.promise(fn)` where `fn` throws synchronously crashed instead of showing the error toast.",
+          "The promise success state ignored the Toaster's `duration`.",
+          "`draggable: false` toasts couldn't be focused by the hotkey / arrow keys / Escape.",
+        ],
+      },
+      {
+        kind: "technical",
+        title: "Demo site",
+        items: [
+          "New **Upload progress** demo card showing `toast.progress()` end to end.",
+          "**Live npm downloads** — total, last 30 days and last 7 days in the stats strip.",
+          "Animated sine-wave background and a custom trailing cursor, both in the site's theme colours.",
+          "Social preview image (Open Graph / Twitter), SEO metadata and a new favicon.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.3.0",
     date: "August 27, 2026",
     highlight:
       "Optional sound + mobile vibration per toast, a custom portal `container`, an overflow indicator, Escape/arrow-key toast navigation, and a first test suite.",
-    isLatest: true,
     sections: [
       {
         kind: "added",
@@ -425,6 +466,77 @@ function useVisitorStats(): VisitorStats {
   return stats;
 }
 
+/* ── npm download counts for the footer — public npm downloads API
+   (CORS-enabled). Fails silently to "—" offline. ── */
+const NPM_PACKAGE = "react-toaster-message";
+/** First publish — the API needs an explicit start date for an all-time total. */
+const NPM_FIRST_PUBLISH = "2026-05-21";
+
+type NpmDownloads = {
+  total: number | null;
+  month: number | null;
+  week: number | null;
+};
+
+function useNpmDownloads(): NpmDownloads {
+  const [stats, setStats] = useState<NpmDownloads>({
+    total: null,
+    month: null,
+    week: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchPoint = async (period: string) => {
+      try {
+        const res = await fetch(
+          `https://api.npmjs.org/downloads/point/${period}/${NPM_PACKAGE}`,
+        );
+        if (!res.ok) return null;
+        const data = (await res.json()) as { downloads?: number };
+        return typeof data.downloads === "number" ? data.downloads : null;
+      } catch {
+        return null;
+      }
+    };
+
+    // A single range is capped at 18 months, so the all-time total is
+    // summed from yearly chunks between the first publish and today.
+    const fetchTotal = async () => {
+      const DAY = 86_400_000;
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+      const end = Date.now();
+      const ranges: string[] = [];
+      for (
+        let start = Date.parse(`${NPM_FIRST_PUBLISH}T00:00:00Z`);
+        start <= end;
+        start += 365 * DAY
+      ) {
+        const chunkEnd = Math.min(start + 364 * DAY, end);
+        ranges.push(`${fmt(new Date(start))}:${fmt(new Date(chunkEnd))}`);
+      }
+      const parts = await Promise.all(ranges.map(fetchPoint));
+      if (parts.some((p) => p === null)) return null;
+      return parts.reduce<number>((sum, p) => sum + (p ?? 0), 0);
+    };
+
+    void Promise.all([
+      fetchTotal(),
+      fetchPoint("last-month"),
+      fetchPoint("last-week"),
+    ]).then(([total, month, week]) => {
+      if (!cancelled) setStats({ total, month, week });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return stats;
+}
+
 /* Eases a number from 0 → target so the stat cards count up on load. */
 function useCountUp(target: number | null, durationMs = 1400): number | null {
   const [value, setValue] = useState<number | null>(null);
@@ -585,6 +697,12 @@ export default function App() {
   const { hits, visitors } = useVisitorStats();
   const hitsAnim = useCountUp(hits);
   const visitorsAnim = useCountUp(visitors);
+
+  // npm download counts for the footer
+  const npmDownloads = useNpmDownloads();
+  const npmTotalAnim = useCountUp(npmDownloads.total);
+  const npmMonthAnim = useCountUp(npmDownloads.month);
+  const npmWeekAnim = useCountUp(npmDownloads.week);
 
   useEffect(() => {
     document.documentElement.dataset.pageTheme = pageTheme;
@@ -989,6 +1107,49 @@ toast.update(id, {
           );
         },
       },
+      {
+        id: "upload-progress",
+        label: "Upload progress",
+        description: "Live 0 → 100% bar, then success.",
+        icon: "📤",
+        category: "interactive",
+        code: `const id = toast.loading("Uploading report.pdf…", {
+  progress: 0,
+});
+
+xhr.upload.onprogress = (e) => {
+  const pct = e.loaded / e.total;
+  toast.progress(id, pct, {
+    description: \`\${Math.round(pct * 100)}% uploaded\`,
+  });
+};
+
+xhr.onload = () => toast.success("Upload complete", { id });`,
+        run: () => {
+          const id = toast.loading("Uploading report.pdf…", {
+            progress: 0,
+            description: "0% uploaded",
+          });
+          let pct = 0;
+          const timer = setInterval(() => {
+            pct = Math.min(1, pct + 0.08 + Math.random() * 0.12);
+            toast.progress(id, pct, {
+              description: `${Math.round(pct * 100)}% uploaded`,
+            });
+            if (pct >= 1) {
+              clearInterval(timer);
+              setTimeout(
+                () =>
+                  toast.success("Upload complete", {
+                    id,
+                    description: "report.pdf · 4.2 MB",
+                  }),
+                350,
+              );
+            }
+          }, 350);
+        },
+      },
 
       // Animations
       ...AOS_ANIMATIONS.map<Demo>((name) => ({
@@ -1114,6 +1275,7 @@ toast.update(id, {
   return (
     <div className="page">
       <style>{styles}</style>
+      <WaveBackground />
 
       <nav
         className={`sticky-nav ${scrolled ? "is-visible" : ""}`}
@@ -1249,7 +1411,7 @@ toast.update(id, {
           </div>
 
           <div className="hero-content">
-            <span className="pill">V1.3.0 · Framer Motion · SSR-safe</span>
+            <span className="pill">V{LATEST_VERSION} · Framer Motion · SSR-safe</span>
             <h1 className="title">
               Premium toasts
               <br />
@@ -1257,8 +1419,8 @@ toast.update(id, {
             </h1>
             <p className="lede">
               A Sonner-inspired toast system with buttery animations,
-              swipe-to-dismiss, promise flows, queue management, and
-              tree-shakeable ESM/CJS builds.
+              swipe-to-dismiss, promise flows, live upload progress, queue
+              management, and tree-shakeable ESM/CJS builds.
             </p>
 
             <div className="hero-cta">
@@ -1816,6 +1978,39 @@ toast.update(id, {
               </span>
             </span>
           </div>
+
+          {/* npm downloads — live from the npm downloads API */}
+          <a
+            className="stat-card stat-card--highlight stat-card--link"
+            href={`https://www.npmjs.com/package/${NPM_PACKAGE}`}
+            target="_blank"
+            rel="noreferrer"
+            title="View react-toaster-message on npm"
+          >
+            <span className="stat-icon" aria-hidden>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <path d="M7 10l5 5 5-5" />
+                <path d="M12 15V3" />
+              </svg>
+            </span>
+            <span className="stat-body">
+              <span className="stat-label">npm Downloads</span>
+              <span className="stat-value stat-num">
+                {formatStat(npmTotalAnim)}
+              </span>
+              <span className="stat-sub">
+                {formatStat(npmMonthAnim)} in 30d · {formatStat(npmWeekAnim)} in 7d
+              </span>
+            </span>
+          </a>
         </div>
       </div>
 
@@ -1855,7 +2050,399 @@ toast.update(id, {
         toastOptions={{ progressBar, variant }}
         containerStyle={gradientVars}
       />
+
+      <CustomCursor />
     </div>
+  );
+}
+
+/* ───────── Animated sine-wave background ─────────
+   Two "silk ribbons", each a bundle of thin sine lines that twist through
+   each other. Every line is a sum of sines whose frequencies, speeds and
+   phases are randomised per page load and whose amplitude/baseline drift
+   slowly over time, so the motion never visibly loops. Colours come from
+   the page theme tokens (--accent-3 → --accent → --accent-2) and are
+   re-read when the light/dark theme toggles. Reduced motion = one still
+   frame. */
+
+type WaveRibbon = {
+  /** baseline, as a fraction of viewport height */
+  y: number;
+  /** wave height, as a fraction of viewport height */
+  amp: number;
+  /** ribbon thickness, as a fraction of viewport height */
+  thickness: number;
+  lines: number;
+  alpha: number;
+  glow: boolean;
+  reverse: boolean;
+  f1: number;
+  f2: number;
+  s1: number;
+  s2: number;
+  twistF: number;
+  twistS: number;
+  phase: number;
+};
+
+const TAU = Math.PI * 2;
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
+function makeRibbons(): WaveRibbon[] {
+  return [
+    {
+      y: 0.6, amp: 0.12, thickness: 0.11, lines: 24, alpha: 0.42,
+      glow: true, reverse: false,
+      f1: rand(0.55, 0.85), f2: rand(1.2, 1.8),
+      s1: rand(0.32, 0.48), s2: rand(0.18, 0.3),
+      twistF: rand(0.45, 0.8), twistS: rand(0.22, 0.36),
+      phase: rand(0, TAU),
+    },
+    {
+      y: 0.3, amp: 0.07, thickness: 0.07, lines: 16, alpha: 0.32,
+      glow: false, reverse: true,
+      f1: rand(0.8, 1.2), f2: rand(1.6, 2.4),
+      s1: rand(0.24, 0.36), s2: rand(0.14, 0.24),
+      twistF: rand(0.6, 1.0), twistS: rand(0.18, 0.3),
+      phase: rand(0, TAU),
+    },
+  ];
+}
+
+/** "#rrggbb" + alpha → rgba(); anything else is returned unchanged. */
+function withAlpha(color: string, a: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return color;
+  const n = parseInt(m[1]!, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+function WaveBackground() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const root = document.documentElement;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const ribbons = makeRibbons();
+
+    let w = 0;
+    let h = 0;
+    let dark = true;
+    let colors = { a: "#f472b6", b: "#a78bfa", c: "#60a5fa" };
+    let gradients: CanvasGradient[] = [];
+    // random start so every visit opens on a different shape
+    let t = rand(0, 1000);
+    let lastNow = 0;
+    let raf = 0;
+
+    const buildGradients = () => {
+      gradients = ribbons.map((r) => {
+        const g = ctx.createLinearGradient(0, 0, w, 0);
+        const [from, to] = r.reverse ? [colors.c, colors.a] : [colors.a, colors.c];
+        // fade out at both screen edges
+        g.addColorStop(0, withAlpha(from, 0));
+        g.addColorStop(0.14, from);
+        g.addColorStop(0.5, colors.b);
+        g.addColorStop(0.86, to);
+        g.addColorStop(1, withAlpha(to, 0));
+        return g;
+      });
+    };
+
+    const readTheme = () => {
+      const cs = getComputedStyle(root);
+      dark = root.dataset.pageTheme !== "light";
+      colors = {
+        a: cs.getPropertyValue("--accent-3").trim() || colors.a,
+        b: cs.getPropertyValue("--accent").trim() || colors.b,
+        c: cs.getPropertyValue("--accent-2").trim() || colors.c,
+      };
+      buildGradients();
+    };
+
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.clientWidth;
+      h = canvas.clientHeight;
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildGradients();
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      // additive blending glows on dark; plain blending stays clean on light
+      ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
+      const themeAlpha = dark ? 1 : 0.75;
+      const step = Math.max(8, w / 140);
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      ribbons.forEach((r, ri) => {
+        ctx.strokeStyle = gradients[ri]!;
+        // slow "random" drift of height and baseline
+        const ampNow = r.amp * h * (0.72 + 0.28 * Math.sin(t * 0.17 + r.phase));
+        const baseNow = r.y * h + Math.sin(t * 0.05 + r.phase * 1.3) * h * 0.035;
+
+        const yAt = (x: number, p: number) => {
+          const u = x / w;
+          const twist = Math.sin(u * TAU * r.twistF + t * r.twistS + r.phase);
+          const spread = (p - 0.5) * r.thickness * h * (0.3 + 0.7 * twist);
+          return (
+            baseNow +
+            spread +
+            ampNow *
+              (0.62 * Math.sin(u * TAU * r.f1 + t * r.s1 + p * 0.9 + r.phase) +
+                0.38 * Math.sin(u * TAU * r.f2 - t * r.s2 + r.phase * 1.7))
+          );
+        };
+
+        // Smooth curve through the samples (quadratic segments meeting at
+        // midpoints). Straight polyline joints showed up as faint vertical
+        // stripes where many lines bunch up under additive blending.
+        const strokeLine = (p: number) => {
+          let px = 0;
+          let py = yAt(0, p);
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          for (let x = step; x <= w + step; x += step) {
+            const y = yAt(x, p);
+            ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+            px = x;
+            py = y;
+          }
+          ctx.lineTo(px, py);
+          ctx.stroke();
+        };
+
+        // soft wide glow under the main ribbon
+        if (r.glow) {
+          ctx.globalAlpha = (dark ? 0.07 : 0.06) * themeAlpha;
+          ctx.lineWidth = Math.max(26, h * 0.05);
+          strokeLine(0.5);
+        }
+
+        // >1px on purpose: Chrome draws ≤1px strokes as per-segment
+        // "hairlines" that double-blend at every joint, which reads as a
+        // faint grid once the lines bunch up; a real stroke outline doesn't.
+        ctx.lineWidth = 1.35;
+        for (let i = 0; i < r.lines; i++) {
+          const p = r.lines === 1 ? 0.5 : i / (r.lines - 1);
+          // centre lines brighter, outer lines fade
+          ctx.globalAlpha =
+            0.8 * r.alpha * themeAlpha * (0.2 + 0.8 * Math.sin(p * Math.PI));
+          strokeLine(p);
+        }
+      });
+
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    };
+
+    const frame = (now: number) => {
+      // clamp so returning to a background tab doesn't jump the waves
+      const dt = lastNow ? Math.min(0.05, (now - lastNow) / 1000) : 0;
+      lastNow = now;
+      t += dt;
+      draw();
+      raf = requestAnimationFrame(frame);
+    };
+
+    const start = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      lastNow = 0;
+      if (reduceMotion.matches) draw();
+      else raf = requestAnimationFrame(frame);
+    };
+
+    const onResize = () => {
+      resize();
+      if (reduceMotion.matches) draw();
+    };
+    const themeObserver = new MutationObserver(() => {
+      readTheme();
+      if (reduceMotion.matches) draw();
+    });
+
+    resize();
+    readTheme();
+    start();
+    canvas.classList.add("is-ready");
+
+    window.addEventListener("resize", onResize);
+    reduceMotion.addEventListener("change", start);
+    themeObserver.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-page-theme"],
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+      reduceMotion.removeEventListener("change", start);
+      themeObserver.disconnect();
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="wave-bg" aria-hidden="true" />;
+}
+
+/* ───────── Custom cursor ─────────
+   A small dot that sits exactly on the pointer, plus a ring that trails
+   after it with an eased lag. Mouse/pen only — touch devices keep their
+   native behaviour. Positions are written straight to the DOM from a rAF
+   loop (no React state per frame), and the loop stops once the ring has
+   caught up so an idle page costs nothing. */
+
+const CURSOR_INTERACTIVE =
+  'a[href], button, [role="button"], [role="tab"], [role="switch"], input, select, textarea, label, summary, [tabindex]:not([tabindex="-1"])';
+const CURSOR_TEXT_FIELDS =
+  'input:not([type]), input[type="text"], input[type="email"], input[type="search"], input[type="url"], input[type="password"], input[type="number"], input[type="tel"], textarea, [contenteditable=""], [contenteditable="true"]';
+/** Fraction of the remaining distance the ring covers per 60fps frame. */
+const CURSOR_FOLLOW = 0.16;
+
+function CustomCursor() {
+  const [enabled, setEnabled] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const dotRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+
+  // Only for a real hovering pointer (mouse / trackpad / pen).
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const update = () => setEnabled(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (!enabled || !wrap || !dot || !ring) return;
+
+    const root = document.documentElement;
+    root.classList.add("has-custom-cursor");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const target = { x: 0, y: 0 };
+    const ringPos = { x: 0, y: 0 };
+    let raf = 0;
+    let lastTime = 0;
+    let visible = false;
+
+    const place = (el: HTMLElement, x: number, y: number) => {
+      el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    };
+
+    const tick = (now: number) => {
+      const dt = lastTime ? Math.min(64, now - lastTime) : 16.7;
+      lastTime = now;
+      // frame-rate independent easing; reduced motion = no trailing
+      const k = reduceMotion.matches
+        ? 1
+        : 1 - Math.pow(1 - CURSOR_FOLLOW, dt / 16.7);
+      ringPos.x += (target.x - ringPos.x) * k;
+      ringPos.y += (target.y - ringPos.y) * k;
+
+      const settled =
+        Math.abs(target.x - ringPos.x) < 0.1 &&
+        Math.abs(target.y - ringPos.y) < 0.1;
+      if (settled) {
+        ringPos.x = target.x;
+        ringPos.y = target.y;
+      }
+      place(ring, ringPos.x, ringPos.y);
+
+      if (settled) {
+        raf = 0;
+        lastTime = 0;
+      } else {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+
+    const show = () => {
+      if (visible) return;
+      visible = true;
+      wrap.classList.add("is-visible");
+    };
+    const hide = () => {
+      visible = false;
+      wrap.classList.remove("is-visible", "is-down");
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      target.x = e.clientX;
+      target.y = e.clientY;
+      if (!visible) {
+        // first move (or re-entering the window): start the ring on the
+        // pointer instead of sweeping in from the old spot
+        ringPos.x = target.x;
+        ringPos.y = target.y;
+        place(ring, ringPos.x, ringPos.y);
+        show();
+      }
+      place(dot, target.x, target.y);
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+
+    const onOver = (e: PointerEvent) => {
+      const el = e.target instanceof Element ? e.target : null;
+      const isText = !!el?.closest(CURSOR_TEXT_FIELDS);
+      wrap.classList.toggle("is-text", isText);
+      wrap.classList.toggle(
+        "is-hover",
+        !isText && !!el?.closest(CURSOR_INTERACTIVE),
+      );
+    };
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType !== "touch") wrap.classList.add("is-down");
+    };
+    const onUp = () => wrap.classList.remove("is-down");
+
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.addEventListener("pointerover", onOver, { passive: true });
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("pointerup", onUp, { passive: true });
+    root.addEventListener("mouseleave", hide);
+    window.addEventListener("blur", hide);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      root.classList.remove("has-custom-cursor");
+      window.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerover", onOver);
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointerup", onUp);
+      root.removeEventListener("mouseleave", hide);
+      window.removeEventListener("blur", hide);
+    };
+  }, [enabled]);
+
+  if (!enabled) return null;
+
+  // Portaled to <body> so no transformed ancestor can offset the fixed
+  // positioning, and it stays above modals and the toast portal.
+  return createPortal(
+    <div ref={wrapRef} className="cc" aria-hidden="true">
+      <div ref={ringRef} className="cc-ring">
+        <span className="cc-ring-shape" />
+      </div>
+      <div ref={dotRef} className="cc-dot">
+        <span className="cc-dot-shape" />
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -2707,6 +3294,9 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  /* own stacking context, so the z-index:-1 wave canvas paints above this
+     background but below all page content */
+  isolation: isolate;
   background:
     radial-gradient(1100px 600px at 80% -10%, rgba(167,139,250,0.18), transparent 60%),
     radial-gradient(900px 500px at -10% 10%, rgba(96,165,250,0.16), transparent 60%),
@@ -2924,6 +3514,9 @@ body {
   padding: 12px 18px;
   border-radius: 12px;
   background: var(--surface-strong);
+  /* frosted, so the wave background passing behind never cuts the text */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   font-family: ui-monospace, SFMono-Regular, "Menlo", monospace;
   font-size: 13.5px;
@@ -3934,7 +4527,7 @@ body {
   max-width: 1120px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -4036,6 +4629,23 @@ body {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+}
+
+/* clickable stat card (npm downloads → npm page) */
+.stat-card--link {
+  color: inherit;
+  text-decoration: none;
+}
+.stat-card--link:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.stat-sub {
+  font-size: 11.5px;
+  color: var(--text-mute);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-live {
@@ -4347,6 +4957,9 @@ html[data-page-theme="dark"] .wn-tag-docs { color: #f9a8d4; }
 }
 
 /* Stats + What's New — responsive */
+@media (max-width: 1024px) {
+  .stats-strip-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 768px) {
   .stats-strip { padding: 18px 20px; }
   .stats-strip-inner { grid-template-columns: 1fr; gap: 10px; }
@@ -4365,5 +4978,107 @@ html[data-page-theme="dark"] .wn-tag-docs { color: #f9a8d4; }
   .wn-footer { flex-direction: column-reverse; align-items: stretch; }
   .wn-footer .primary-btn { width: 100%; }
   .wn-vhead { gap: 8px; }
+}
+
+/* ───────── Wave background (see WaveBackground) ───────── */
+.wave-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.wave-bg.is-ready { opacity: 1; }
+
+/* ───────── Custom cursor (see CustomCursor) ─────────
+   Ring = --accent, dot = --accent-3 — the same violet/pink pair as the
+   brand mark, and both follow the light/dark page theme. */
+html.has-custom-cursor,
+html.has-custom-cursor * {
+  cursor: none !important;
+}
+/* typing still gets the native I-beam (the custom cursor hides there) */
+html.has-custom-cursor :is(
+  input:not([type]), input[type="text"], input[type="email"],
+  input[type="search"], input[type="url"], input[type="password"],
+  input[type="number"], input[type="tel"], textarea,
+  [contenteditable=""], [contenteditable="true"]
+) {
+  cursor: text !important;
+}
+/* top-level layer above modals and the toast portal (z-index 999999) */
+.cc {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.cc.is-visible { opacity: 1; }
+.cc.is-text { opacity: 0; }
+.cc-ring,
+.cc-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.cc-ring-shape,
+.cc-dot-shape {
+  display: block;
+  border-radius: 50%;
+}
+.cc-ring-shape {
+  width: 28px;
+  height: 28px;
+  margin: -16px 0 0 -16px;
+  border: 1.5px solid var(--accent);
+  background: transparent;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease,
+    border-color 0.25s ease;
+}
+/* Drawn at its hover size (28px) and scaled down to an 8px dot at rest,
+   so the hover blob stays crisp instead of being an upscaled bitmap. */
+.cc-dot-shape {
+  width: 24px;
+  height: 24px;
+  margin: -14px 0 0 -14px;
+  background: var(--accent-3);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--accent-3) 55%, transparent);
+  transform: scale(0.2857);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s ease,
+    box-shadow 0.25s ease;
+}
+/* over something clickable (pointer cursor): the dot swells into a soft
+   translucent disc and the ring tightens around it as a thin outline */
+.cc.is-hover .cc-dot-shape {
+  transform: scale(1);
+  opacity: 0.5;
+  box-shadow: none;
+}
+.cc.is-hover .cc-ring-shape {
+  transform: scale(0.875);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+/* press feedback */
+.cc.is-down .cc-ring-shape { transform: scale(0.8); }
+.cc.is-down .cc-dot-shape { transform: scale(0.22); }
+.cc.is-hover.is-down .cc-ring-shape { transform: scale(0.75); }
+.cc.is-hover.is-down .cc-dot-shape { transform: scale(0.85); }
+@media (prefers-reduced-motion: reduce) {
+  .cc-ring-shape,
+  .cc-dot-shape { transition: none; }
 }
 `;

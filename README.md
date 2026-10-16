@@ -1,21 +1,24 @@
 <div align="center">
 
+[![react-toaster-message — premium toasts for modern React](https://raw.githubusercontent.com/yogeshgabani/react-toast-message/main/examples/public/og-image.png)](https://react-toast-message.netlify.app/)
+
 # react-toaster-message
 
 **A premium, Sonner-inspired React toast notification library.**
 
-Framer-Motion animations · swipe-to-dismiss · promise toasts · FIFO stagger · 6 themes · 14 visual variants · rich colors · a11y · SSR-safe · TypeScript-first.
+Framer-Motion animations · swipe-to-dismiss · promise & upload-progress toasts · FIFO stagger · 6 themes · 14 visual variants · rich colors · a11y · SSR-safe · TypeScript-first.
 
 [![npm](https://img.shields.io/npm/v/react-toaster-message.svg?color=4f46e5&style=flat-square)](https://www.npmjs.com/package/react-toaster-message)
+[![downloads](https://img.shields.io/npm/dm/react-toaster-message.svg?color=8b5cf6&style=flat-square)](https://www.npmjs.com/package/react-toaster-message)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/react-toaster-message?color=10b981&style=flat-square&label=minzip)](https://bundlephobia.com/package/react-toaster-message)
 [![types](https://img.shields.io/badge/types-included-3178c6?style=flat-square)](#api)
 [![license](https://img.shields.io/badge/license-MIT-emerald?style=flat-square)](./LICENSE)
-[![bundle](https://img.shields.io/badge/tree--shakable-✓-10b981?style=flat-square)](#ssr)
+
+**[Live demo & playground →](https://react-toast-message.netlify.app/)**
 
 </div>
 
 A modern, premium React toast notification library — Sonner-inspired, built with Framer Motion, fully accessible, SSR-safe, and tree-shakeable.
-
-🔗 **Live demo:** [https://react-toast-message.netlify.app/](https://react-toast-message.netlify.app/)
 
 - 🎬 Smooth Framer-Motion-powered animations (slide, blur-fade, spring, scale, bounce)
 - 🧱 Stack reposition with `layout` animations
@@ -26,12 +29,35 @@ A modern, premium React toast notification library — Sonner-inspired, built wi
 - ⏸ Pause on hover, pause on window blur
 - 📦 Sonner-style collapsed stack (expand on hover) + `maxVisibleToasts`
 - ⏳ Promise toasts with loading → success / error transitions
+- 📤 Upload / progress toasts — a live 0 → 100% bar driven by `toast.progress(id, value)`
 - 🎯 Action / cancel / undo / confirmation toasts
 - ♻️ `toast.update(id, …)` to mutate live toasts
 - 🔊 Optional sound + mobile vibration, per toast type or per individual toast
 - 🎯 `container` prop to mount the portal anywhere (shadow root, modal, …)
 - ♿ ARIA `role`, `aria-live`, reduced-motion aware, hotkey-focusable, arrow-key toast navigation, Escape-to-dismiss
 - 🪶 Lightweight, tree-shakeable ESM + CJS builds, SSR-safe
+
+## What's new in v1.4.0
+
+**Added**
+
+- **Progress toasts** for uploads, exports and other long tasks — pass `progress` (0–1) and call `toast.progress(id, value)` as work advances. See [Upload / progress toasts](#upload--progress-toasts).
+- Per-toast `pauseOnHover` and `pauseOnWindowBlur` now work (they were in the types but ignored).
+
+**Fixed**
+
+- `toast.loading()` followed by `toast.success("…", { id })` left the success toast on screen forever — it now auto-closes after the default duration.
+- The countdown `progressBar` jumped ahead of the real timer whenever the toast re-rendered (hover, a new toast arriving).
+- `dismissible: false` toasts could still be swiped away.
+- `pauseOnHover={false}` still paused a toast while the pointer was over it.
+- `toastOptions.duration` was ignored in favour of `duration`.
+- Two `toast.promise()` calls in the same millisecond shared one toast.
+- `toast.promise(fn)` where `fn` throws synchronously crashed instead of showing the error toast; the success state also ignored the Toaster's `duration`.
+- `draggable: false` toasts couldn't be focused by the hotkey, arrow keys or Escape.
+
+**Demo site**
+
+- New [Upload progress demo](https://react-toast-message.netlify.app/), live npm download stats, and a refreshed look with a social preview image.
 
 ## What's new in v1.3.0
 
@@ -56,10 +82,11 @@ A modern, premium React toast notification library — Sonner-inspired, built wi
 
 ## Install
 
-**1. Install the package** (peer deps included):
+**1. Install the package** (`framer-motion` and `zustand` come with it):
 
 ```bash
-npm install react-toaster-message framer-motion zustand
+npm install react-toaster-message
+# or: pnpm add react-toaster-message · yarn add react-toaster-message
 ```
 
 **2. Import the stylesheet** — required, otherwise toasts will render unstyled / invisible:
@@ -91,6 +118,31 @@ export default function App() {
   );
 }
 ```
+
+### Next.js (App Router)
+
+The build ships with a `"use client"` directive, so `<Toaster />` can go
+straight into a Server Component layout:
+
+```tsx
+// app/layout.tsx
+import "react-toaster-message/styles.css";
+import { Toaster } from "react-toaster-message";
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        <Toaster richColors closeButton />
+      </body>
+    </html>
+  );
+}
+```
+
+Call `toast()` from any Client Component (`"use client"`), event handler or
+client-side utility.
 
 ### Full `<Toaster />` reference (every prop, with comments)
 
@@ -230,10 +282,15 @@ toast("Item moved to trash", {
                                             //   edge (x = both sides, y = top+bottom)
   richColors: true,                         // semantic tint just for this toast
   progressBar: true,                        // visual countdown bar
+  progress: 0.4,                            // determinate 0–1 bar (uploads…);
+                                            //   the toast stays up while set —
+                                            //   see toast.progress() below
   closeButton: true,                        // show ✕
-  dismissible: true,                        // false = ignore swipe/✕
+  dismissible: true,                        // false = ignore swipe/✕/Escape
   draggable: true,                          // swipe-to-dismiss on/off
   swipeDirection: "x",                      // x | y | auto
+  pauseOnHover: true,                       // override the Toaster setting
+  pauseOnWindowBlur: true,                  //   for this toast only
 
   icon: "🗑️",                                // any ReactNode (string/JSX/svg)
   animation: "blur-fade",                   // override the global animation
@@ -267,6 +324,8 @@ toast("Item moved to trash", {
 // ─── Programmatic control ───────────────────────────────────────
 const id = toast.loading("Uploading…");
 toast.update(id, { type: "success", title: "Uploaded!", duration: 3000 });
+toast.success("Uploaded!", { id });          // same thing, shorter
+toast.progress(id, 0.5);                     // report 50% progress
 toast.dismiss(id);     // dismiss one
 toast.dismiss();       // dismiss all
 
@@ -297,6 +356,38 @@ toast.promise(() => fetch("/api/me").then((r) => r.json()), {
   error:   "Failed",
 });
 ```
+
+### Upload / progress toasts
+
+For work where you know how far along you are — file uploads, exports,
+imports, batch jobs — give the toast a `progress` value (0–1) and keep it
+updated with `toast.progress(id, value)`. A determinate bar fills along the
+bottom edge:
+
+```tsx
+const id = toast.loading("Uploading report.pdf…", { progress: 0 });
+
+const xhr = new XMLHttpRequest();
+xhr.upload.onprogress = (e) => {
+  const pct = e.loaded / e.total;
+  // optional 3rd argument patches any other field in the same call
+  toast.progress(id, pct, { description: `${Math.round(pct * 100)}% uploaded` });
+};
+xhr.onload = () => toast.success("Upload complete", { id });
+xhr.onerror = () => toast.error("Upload failed", { id });
+xhr.open("POST", "/api/upload");
+xhr.send(file);
+```
+
+**Effect:** the toast stays on screen while it reports progress (it never
+auto-closes mid-upload). As soon as it changes type — `toast.success(…, { id })`
+or `toast.error(…, { id })` — the progress bar is cleared and the normal
+auto-close timer starts. Values are clamped to 0–1. The bar is exposed to
+assistive tech as `role="progressbar"` with `aria-valuenow`, and its color
+can be themed with the `--rtoast-progress-color` CSS variable.
+
+`progress` (determinate, you drive it) is separate from `progressBar` (the
+auto-close countdown).
 
 ### Confirmation / undo
 
@@ -447,8 +538,9 @@ Full annotated reference is in [Quick start](#quick-start) above. Defaults:
 
 See the fully-commented `toast(...)` block in [Quick start](#quick-start) for
 every per-call option (`description`, `action`, `cancel`, `icon`, `variant`,
-`richColors`, `progressBar`, `draggable`, `swipeDirection`, `sound`, `vibrate`,
-`onDismiss`, `onAutoClose`, `className(s)`, `style(s)`, …).
+`richColors`, `progressBar`, `progress`, `draggable`, `swipeDirection`,
+`pauseOnHover`, `pauseOnWindowBlur`, `sound`, `vibrate`, `onDismiss`,
+`onAutoClose`, `className(s)`, `style(s)`, …).
 
 ## Theming
 

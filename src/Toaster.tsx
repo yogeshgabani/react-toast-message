@@ -68,8 +68,17 @@ export function Toaster(props: ToasterProps) {
   const setMaxVisible = useToastStore((s) => s.setMaxVisible);
   const setDefaultDuration = useToastStore((s) => s.setDefaultDuration);
   const setPaused = useToastStore((s) => s.setPaused);
+  const setWindowBlurred = useToastStore((s) => s.setWindowBlurred);
   const paused = useToastStore((s) => s.paused);
+  const windowBlurred = useToastStore((s) => s.windowBlurred);
   const expanded = useToastStore((s) => s.expanded);
+  // `toastOptions.duration` is the default for every toast, so the store
+  // must compute expiries from it — otherwise it was silently ignored in
+  // favour of `duration`.
+  const effectiveDuration = toastOptions?.duration ?? duration;
+  // Joined so a fresh array literal each render (including the default
+  // parameter) doesn't re-subscribe the keydown listener every render.
+  const hotkeyCombo = hotkey?.join("+") ?? "";
 
   // Resolved lazily in an effect (not eagerly at module scope) so the
   // portal never renders during SSR — `document` doesn't exist there, and
@@ -132,30 +141,31 @@ export function Toaster(props: ToasterProps) {
   }, [max, setMaxVisible]);
 
   useEffect(() => {
-    setDefaultDuration(duration);
-  }, [duration, setDefaultDuration]);
+    setDefaultDuration(effectiveDuration);
+  }, [effectiveDuration, setDefaultDuration]);
 
-  // Window blur pause
+  // Window blur is always tracked; whether it pauses a given toast is
+  // decided per toast (`pauseOnWindowBlur`, defaulting to this prop).
   useEffect(() => {
-    if (!pauseOnWindowBlur) return;
-    const onBlur = () => setPaused(true);
-    const onFocus = () => setPaused(false);
+    const onBlur = () => setWindowBlurred(true);
+    const onFocus = () => setWindowBlurred(false);
     window.addEventListener("blur", onBlur);
     window.addEventListener("focus", onFocus);
     return () => {
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("focus", onFocus);
     };
-  }, [pauseOnWindowBlur, setPaused]);
+  }, [setWindowBlurred]);
 
   // Hotkey focuses the frontmost toast — across every position, not just
   // the Toaster's default one, so a per-toast `position` override is still
   // reachable. From there Tab moves through its action/cancel/close
   // buttons, and Escape (below) dismisses it.
   useEffect(() => {
-    if (!hotkey || hotkey.length === 0) return;
+    if (!hotkeyCombo) return;
+    const keys = hotkeyCombo.split("+");
     const onKey = (e: KeyboardEvent) => {
-      const matchMod = hotkey.every((k) => {
+      const matchMod = keys.every((k) => {
         if (k === "altKey") return e.altKey;
         if (k === "ctrlKey") return e.ctrlKey;
         if (k === "metaKey") return e.metaKey;
@@ -172,7 +182,7 @@ export function Toaster(props: ToasterProps) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [hotkey]);
+  }, [hotkeyCombo]);
 
   // Arrow-key navigation between toasts once one already has focus (via the
   // hotkey or Tab) — does nothing when focus is elsewhere on the page, so
@@ -217,8 +227,9 @@ export function Toaster(props: ToasterProps) {
   // Toasts beyond the visible cap are kept in the store but not rendered,
   // so no per-item timer runs for them. Expire them straight from the
   // store — otherwise they'd pile up invisibly and never auto-dismiss.
+  const overflowPaused = paused || (pauseOnWindowBlur && windowBlurred);
   useEffect(() => {
-    if (paused || !isFinite(max)) return;
+    if (overflowPaused || !isFinite(max)) return;
     const overflow: ToastData[] = [];
     let earliest = Infinity;
     for (const pos of POSITION_LIST) {
@@ -246,7 +257,7 @@ export function Toaster(props: ToasterProps) {
       }
     }, Math.max(0, earliest - Date.now()));
     return () => clearTimeout(timer);
-  }, [grouped, max, paused]);
+  }, [grouped, max, overflowPaused]);
 
   if (!portalTarget) return null;
 
@@ -299,11 +310,13 @@ export function Toaster(props: ToasterProps) {
                   index={idx}
                   total={visibleList.length}
                   position={pos}
-                  defaultDuration={duration}
+                  defaultDuration={effectiveDuration}
                   defaultAnimation={animation}
                   expand={isExpanded}
                   closeButtonDefault={closeButton}
                   richColorsDefault={richColors}
+                  pauseOnHoverDefault={pauseOnHover}
+                  pauseOnWindowBlurDefault={pauseOnWindowBlur}
                   dir={resolvedDir}
                   sounds={sounds}
                   soundVolume={soundVolume}

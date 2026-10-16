@@ -1,0 +1,266 @@
+<!doctype html>
+<!--
+  Source for examples/public/og-image.png (1200×630 social preview).
+  The toast cards use the library's real stylesheet, so they always match.
+  Regenerate after editing (Windows, from the repo root):
+    "C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1200,630 --screenshot="examples/public/og-image.png" "file:///<repo>/examples/og/og-image.html"
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>react-toaster-message — OG image</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../src/styles.css" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+      }
+      body {
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        color: #e2e8f0;
+        background:
+          radial-gradient(620px 420px at 88% 18%, rgba(139, 92, 246, 0.38), transparent 70%),
+          radial-gradient(560px 460px at 70% 105%, rgba(79, 70, 229, 0.42), transparent 70%),
+          radial-gradient(520px 380px at -5% -10%, rgba(16, 185, 129, 0.16), transparent 70%),
+          #070b18;
+        position: relative;
+      }
+      /* faint dot grid */
+      body::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(rgba(148, 163, 184, 0.16) 1px, transparent 1px);
+        background-size: 26px 26px;
+        mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.25));
+      }
+      .frame {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 440px;
+        gap: 48px;
+        height: 100%;
+        padding: 64px 68px 60px 72px;
+      }
+      .left { display: flex; flex-direction: column; }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-weight: 600;
+        font-size: 24px;
+        color: #f8fafc;
+        letter-spacing: -0.01em;
+      }
+      .logo {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6 55%, #ec4899);
+        box-shadow: 0 10px 30px -8px rgba(139, 92, 246, 0.7),
+          inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      }
+      .version {
+        margin-left: 4px;
+        font-size: 15px;
+        font-weight: 500;
+        color: #c4b5fd;
+        border: 1px solid rgba(196, 181, 253, 0.35);
+        background: rgba(139, 92, 246, 0.12);
+        padding: 4px 10px;
+        border-radius: 999px;
+      }
+      h1 {
+        margin: 40px 0 0;
+        font-size: 66px;
+        line-height: 1.03;
+        letter-spacing: -0.035em;
+        font-weight: 800;
+        color: #f8fafc;
+      }
+      h1 .grad {
+        background: linear-gradient(90deg, #a5b4fc, #c4b5fd 45%, #f9a8d4);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      .lede {
+        margin: 22px 0 0;
+        font-size: 22px;
+        line-height: 1.45;
+        color: #94a3b8;
+        max-width: 560px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .chip {
+        font-size: 15px;
+        font-weight: 500;
+        color: #cbd5e1;
+        padding: 7px 13px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.09);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+      .chip b { color: #a5b4fc; font-weight: 600; }
+      .install {
+        margin-top: auto;
+        display: inline-flex;
+        align-self: flex-start;
+        align-items: center;
+        gap: 12px;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 20px;
+        font-weight: 500;
+        color: #e2e8f0;
+        padding: 14px 20px;
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.6);
+      }
+      .install .p { color: #8b5cf6; }
+
+      /* ---- toast stack (real library classes) ---- */
+      .right {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .rtoast-portal { --rtoast-width: 440px; --rtoast-font: "Inter", "Segoe UI", system-ui, sans-serif; --rtoast-font-size: 16px; }
+      .rtoast-list { gap: 16px; width: 440px; max-width: none; }
+      .rtoast { pointer-events: none; }
+      .rtoast .rtoast-description { font-size: 14px; }
+      .rtoast .rtoast-icon { width: 22px; height: 22px; }
+      .rtoast .rtoast-icon svg { width: 22px; height: 22px; }
+      .rtoast-inner { padding: 16px 18px; }
+      .t1 { transform: translateX(-26px) rotate(-1.2deg); }
+      .t2 { transform: translateX(10px); }
+      .t3 { transform: translateX(-12px) rotate(0.8deg); }
+      .pct {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 13px;
+        color: #3b82f6;
+        font-weight: 600;
+        margin-left: auto;
+        align-self: center;
+      }
+      .new-badge {
+        position: absolute;
+        top: -11px;
+        right: 16px;
+        z-index: 2;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #fff;
+        background: linear-gradient(90deg, #6366f1, #ec4899);
+        padding: 4px 10px;
+        border-radius: 999px;
+        box-shadow: 0 6px 16px -6px rgba(236, 72, 153, 0.8);
+      }
+      .rtoast-progress--determinate .rtoast-progress__bar {
+        background: linear-gradient(90deg, #6366f1, #3b82f6);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <div class="left">
+        <div class="brand">
+          <span class="logo" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+          </span>
+          react-toaster-message
+          <span class="version">v1.4</span>
+        </div>
+
+        <h1>Premium toasts<br /><span class="grad">for modern React.</span></h1>
+        <p class="lede">
+          Sonner-style stacking, Framer Motion animations, promise flows and
+          live upload progress — accessible, SSR-safe, TypeScript-first.
+        </p>
+
+        <div class="chips">
+          <span class="chip"><b>14</b> variants</span>
+          <span class="chip"><b>6</b> themes</span>
+          <span class="chip"><b>30+</b> animations</span>
+          <span class="chip">a11y + keyboard</span>
+        </div>
+
+        <div class="install"><span class="p">$</span> npm i react-toaster-message</div>
+      </div>
+
+      <div class="right">
+        <div class="rtoast-portal rtoast-theme-light">
+          <ol class="rtoast-list rtoast-list--top-right rtoast-list--expanded">
+            <li class="rtoast rtoast--success t1">
+              <div class="rtoast-inner">
+                <span class="rtoast-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m8 12 3 3 5-6" /></svg>
+                </span>
+                <div class="rtoast-body">
+                  <div class="rtoast-title">Changes saved</div>
+                  <div class="rtoast-description">Your profile is up to date.</div>
+                </div>
+              </div>
+            </li>
+
+            <li class="rtoast rtoast--loading t2" style="overflow: visible">
+              <span class="new-badge">NEW</span>
+              <div class="rtoast-inner" style="overflow: hidden; border-radius: inherit; position: relative">
+                <span class="rtoast-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                </span>
+                <div class="rtoast-body">
+                  <div class="rtoast-title">Uploading report.pdf…</div>
+                  <div class="rtoast-description">2.7 MB of 4.2 MB · toast.progress()</div>
+                </div>
+                <span class="pct">64%</span>
+                <div class="rtoast-progress rtoast-progress--determinate">
+                  <div class="rtoast-progress__bar" style="transform: scaleX(0.64)"></div>
+                </div>
+              </div>
+            </li>
+
+            <li class="rtoast rtoast--error t3">
+              <div class="rtoast-inner">
+                <span class="rtoast-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                </span>
+                <div class="rtoast-body">
+                  <div class="rtoast-title">Payment failed</div>
+                  <div class="rtoast-description">Your card was declined.</div>
+                  <div class="rtoast-actions">
+                    <button class="rtoast-action rtoast-action--cancel" type="button">Dismiss</button>
+                    <button class="rtoast-action" type="button">Retry</button>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

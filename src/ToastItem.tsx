@@ -13,7 +13,7 @@ import { CloseButton } from "./components/CloseButton";
 import { Icon } from "./components/Icon";
 import { ProgressBar } from "./components/ProgressBar";
 import { playSound } from "./sound";
-import { useToastStore } from "./store";
+import { hasProgress, useToastStore } from "./store";
 import { vibrateDevice } from "./vibrate";
 import type {
   AnimationPreset,
@@ -39,6 +39,8 @@ interface ToastItemProps {
   expand: boolean;
   closeButtonDefault: boolean;
   richColorsDefault: boolean;
+  pauseOnHoverDefault: boolean;
+  pauseOnWindowBlurDefault: boolean;
   dir: "ltr" | "rtl";
   sounds?: Partial<Record<ToastType, string>>;
   soundVolume?: number;
@@ -65,6 +67,8 @@ function ToastItemInner(
     expand,
     closeButtonDefault,
     richColorsDefault,
+    pauseOnHoverDefault,
+    pauseOnWindowBlurDefault,
     dir,
     sounds,
     soundVolume,
@@ -73,12 +77,15 @@ function ToastItemInner(
   ref: React.ForwardedRef<HTMLLIElement>,
 ) {
   const dismiss = useToastStore((s) => s.dismiss);
-  const globalPaused = useToastStore((s) => s.paused);
+  const listHovered = useToastStore((s) => s.paused);
+  const windowBlurred = useToastStore((s) => s.windowBlurred);
   const prefersReducedMotion = useReducedMotion();
 
-  const duration =
-    toast.duration ??
-    (toast.type === "loading" ? Infinity : defaultDuration);
+  const determinate = hasProgress(toast);
+  const duration = determinate
+    ? Infinity
+    : toast.duration ??
+      (toast.type === "loading" ? Infinity : defaultDuration);
 
   // If the store has assigned a staggered absolute expiry, the timer
   // runs against that instead of the raw `duration`. This keeps toasts
@@ -98,15 +105,31 @@ function ToastItemInner(
   const animation = toast.animation ?? (aosFromClass as typeof defaultAnimation | undefined) ?? defaultAnimation;
 
   const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [removing, setRemoving] = useState(false);
 
-  const paused = globalPaused || hovered || removing;
+  const pauseOnHover = toast.pauseOnHover ?? pauseOnHoverDefault;
+  const pauseOnWindowBlur = toast.pauseOnWindowBlur ?? pauseOnWindowBlurDefault;
+  // Keyboard focus always pauses, so keyboard/screen-reader users get time
+  // to reach the toast's buttons regardless of the hover setting.
+  const paused =
+    removing ||
+    focused ||
+    (pauseOnHover && (listHovered || hovered)) ||
+    (pauseOnWindowBlur && windowBlurred);
 
   const hasExpiry = typeof expiresAt === "number" && isFinite(expiresAt);
 
   const initialRemaining = hasExpiry
     ? Math.max(0, (expiresAt as number) - Date.now())
     : duration;
+
+  // The countdown bar's length is fixed when the expiry is set, not
+  // re-derived every render: `initialRemaining` shrinks as time passes, and
+  // feeding that to a running CSS animation (on hover, on a new toast
+  // arriving, …) made the bar jump ahead of the real timer.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const barDuration = useMemo(() => initialRemaining, [expiresAt, duration]);
 
   const startedAtRef = useRef<number>(Date.now());
   const remainingRef = useRef<number>(initialRemaining);
@@ -238,7 +261,9 @@ function ToastItemInner(
   };
 
   const swipe = resolveSwipe(toast.swipeDirection, position);
-  const draggable = toast.draggable !== false;
+  // `dismissible: false` must also block swipe-to-dismiss, same as it
+  // hides the close button and ignores Escape.
+  const draggable = toast.draggable !== false && dismissible;
 
   // Edge-anchored toasts (left/right) already have a natural swipe-out
   // direction from their position. Center toasts have no such edge, so for
@@ -361,13 +386,26 @@ function ToastItemInner(
             style={toast.styles?.closeButton}
           />
         )}
-        {(toast.progressBar ?? false) && isFinite(initialRemaining) && initialRemaining > 0 && (
+        {determinate ? (
           <ProgressBar
-            duration={initialRemaining}
+            value={toast.progress}
             paused={paused}
             className={toast.classNames?.progress}
             style={toast.styles?.progress}
           />
+        ) : (
+          (toast.progressBar ?? false) &&
+          isFinite(barDuration) &&
+          barDuration > 0 && (
+            <ProgressBar
+              // remount on a new expiry so the CSS animation restarts
+              key={`${expiresAt ?? ""}-${duration}`}
+              duration={barDuration}
+              paused={paused}
+              className={toast.classNames?.progress}
+              style={toast.styles?.progress}
+            />
+          )
         )}
       </>
     );
@@ -377,6 +415,10 @@ function ToastItemInner(
     <motion.li
       ref={ref}
       layout
+      // Explicit so the hotkey / arrow keys / Escape work on every toast —
+      // framer-motion only adds a tabIndex when `whileTap` is set, which
+      // left `draggable: false` toasts unfocusable.
+      tabIndex={0}
       role={role}
       aria-live={ariaLive}
       aria-atomic="true"
@@ -398,8 +440,13 @@ function ToastItemInner(
       transition={transition}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        // focus moving between the toast and its own buttons isn't a blur
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+          setFocused(false);
+        }
+      }}
       {...dragProps}
       whileTap={draggable ? { cursor: "grabbing" } : undefined}
     >

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { createToastData, useToastStore } from "./store";
+import { createToastData, genId, useToastStore } from "./store";
 import type {
   PromiseToastMessages,
   ToastData,
@@ -65,12 +65,26 @@ function update(id: string | number, patch: Partial<ToastData>) {
   useToastStore.getState().update(id, patch);
 }
 
+/** Reports determinate progress (0–1, clamped) on an existing toast —
+ *  e.g. from an upload's `onprogress`. `patch` lets the same call refresh
+ *  other fields, like a "42% · 2.1 MB of 5 MB" description. */
+function progress(
+  id: string | number,
+  value: number,
+  patch?: Partial<ToastData>,
+) {
+  const clamped = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+  useToastStore.getState().update(id, { ...patch, progress: clamped });
+}
+
 function promiseToast<TData>(
   promise: Promise<TData> | (() => Promise<TData>),
   messages: PromiseToastMessages<TData>,
   options: ToastOptions = {},
 ): string | number {
-  const id = options.id ?? `p-${Date.now().toString(36)}`;
+  // genId (not a bare timestamp) so two promises started in the same
+  // millisecond get separate toasts instead of overwriting each other.
+  const id = options.id ?? genId();
   const data = createToastData("loading", messages.loading, {
     duration: Infinity,
     ...options,
@@ -82,8 +96,15 @@ function promiseToast<TData>(
   });
   useToastStore.getState().upsert(data);
 
-  const actualPromise =
-    typeof promise === "function" ? (promise as () => Promise<TData>)() : promise;
+  // A function that throws synchronously (before returning a promise)
+  // should surface as the error toast, not an uncaught exception.
+  let actualPromise: Promise<TData>;
+  try {
+    actualPromise =
+      typeof promise === "function" ? (promise as () => Promise<TData>)() : promise;
+  } catch (err) {
+    actualPromise = Promise.reject(err);
+  }
 
   actualPromise
     .then((value) => {
@@ -104,7 +125,8 @@ function promiseToast<TData>(
         type: "success",
         title,
         description: description ?? data.description,
-        duration: options.duration ?? 4000,
+        // undefined falls back to the Toaster's `duration`
+        duration: options.duration,
       });
     })
     .catch((err) => {
@@ -125,7 +147,10 @@ function promiseToast<TData>(
         type: "error",
         title,
         description: description ?? data.description,
-        duration: options.duration ?? 5000,
+        // errors get a little longer to be read than the default
+        duration:
+          options.duration ??
+          Math.max(5000, useToastStore.getState().defaultDuration),
       });
     });
 
@@ -142,6 +167,7 @@ type ToastFn = ((title: ReactNode, options?: ToastOptions) => string | number) &
   custom: typeof custom;
   action: typeof action;
   promise: typeof promiseToast;
+  progress: typeof progress;
   dismiss: typeof dismiss;
   update: typeof update;
 };
@@ -159,6 +185,7 @@ export const toast: ToastFn = Object.assign(baseFn, {
   custom,
   action,
   promise: promiseToast,
+  progress,
   dismiss,
   update,
 });
